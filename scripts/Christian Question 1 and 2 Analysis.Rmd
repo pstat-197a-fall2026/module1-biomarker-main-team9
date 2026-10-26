@@ -1,10 +1,13 @@
 ---
 title: "Christian Question 1 and 2"
-output: html_document
+output:
+  pdf_document: default
+  html_document: default
 ---
 
 Clean
-```{r}
+```{r, message=FALSE, warning=FALSE}
+library(tidyverse)
 load("../data/biomarker-clean.RData") 
 
 ls()
@@ -12,7 +15,7 @@ dim(biomarker_clean)
 ```
 
 Raw
-```{r}
+```{r, message=FALSE, warning=FALSE}
 biomarker_raw <- read_csv("../data/biomarker-raw.csv")
 
 dim(biomarker_raw)
@@ -46,7 +49,7 @@ What do you imagine is the reason for log-transforming the protein levels in bio
 
 
 Answer to question:
-  I imagine that the main reason for log-transforming the protein levels in biomarker-raw.csv is to correct right skewness and for scaling and trimming to work properly. As seen in the sample of proteins, some protein levels have massive ranges and outliers. And in our sample, 4 out of 6 proteins were right skewed. Applying the log10 transformation compresses these big numbers, correcting the right skewness to become roughly symmetric. But it is important to point out that the log-transformation was not perfect. For example, PPase was already symmetric, but log10 over corrected and made it slightly left-skewed. We also saw a weird situation with Cyclin B1. It had one massive outlier and the histogram looked more skewed afterward even though the skewness only went up from 0.43 to 0.59, meaning there were outliers creating right skewness.
+  I imagine that the main reason for log-transforming the protein levels in biomarker-raw.csv is to correct right skewness and for scaling and trimming to work properly. As seen in the sample of proteins, some protein levels have massive ranges and outliers. And in our sample, 3 out of 6 proteins were right skewed. Applying the log10 transformation compresses these big numbers, correcting the right skewness to become roughly symmetric. But it is important to point out that the log-transformation was not perfect. For example, PPase was already symmetric, but log10 over corrected and made it slightly left-skewed. We also saw a weird situation with Cyclin B1. It had one massive outlier and the histogram looked more skewed afterward even though the skewness only went up from 0.43 to 0.59, meaning there were outliers creating right skewness.
   The overall goal for cleaning this data is to make each protein comparable and meaningful when being plugged into models. And although log-transforming the protein levels isn't perfect, it overall improves the problem of right skewness.
 
 
@@ -56,10 +59,11 @@ Code chunk explanation:
 - But I cannot just use biomarker_raw like I originally did because the protein values were saved as characters and not numeric or double.
 - The solution was to use the code in preprocessing.r, where var_names read the full protein names separately from the abbreviations. And biomarker_clean2 is creating a cleaner version of the raw data where after the second columns, it is all protein columns using the abbreviations.
 - The only difference is I removed the log transform, center and scale, and trim part to later compare the normal protein data and the log transformed data.
-From preprocessing.r:
-```{r}
-library(tidyverse)
 
+\newpage
+
+From preprocessing.r:
+```{r, message=FALSE, warning=FALSE}
 # get names
 var_names <- read_csv("../data/biomarker-raw.csv", 
                      col_names = F, 
@@ -95,7 +99,7 @@ protein_raw <- select(biomarker_clean2, -group, -ados)
 set.seed(888)
 protein_sample <- sample(protein_raw, 6)
 colnames(protein_sample)
-protein_sample
+#protein_sample
 
 # level represents the amount of the specific protein in the person.
 # protein_sample_raw and protein_sample_log were created for reusability.
@@ -185,7 +189,7 @@ protein_sample_raw and protein_sample_log histogram analysis:
 - Visually we can see log protein levels improved the skewness of most of the sampled proteins.
 - PPase and Cyclin B1 are both visually heavily skewed. But specifically for Cyclin B1, this may be caused by an outlier. From the summary statistic, we can see that the maximum number was (8334.1) for Cyclin B1. Also when looking at the calculated skewness for Cyclin B1, it went from (0.4269717) to (0.5939369), so it became slightly more right skewed, which does not explain the visual right skewness of Cyclin B1.
 
-
+\newpage
 
 Question 2:
 Temporarily remove the outlier trimming from preprocessing and do some exploratory analysis of the outlying values. Are there specific subjects (not values) that seem to be outliers? If so, are outliers more frequent in one group or the other? (Hint: consider tabulating the number of outlying values per subject.)
@@ -197,9 +201,9 @@ Answer:
 
 
 Removed trimming from preprocessing.R but left log10() and scale()
-```{r}
+```{r, message=FALSE, warning=FALSE}
 # read in data
-biomarker_clean3 <- read_csv("C:/Users/csola/OneDrive/Desktop/Pstat 197 (Capstone)/module1-biomarker-main-team9/data/biomarker-raw.csv", 
+biomarker_clean3 <- read_csv("../data/biomarker-raw.csv", 
          skip = 2,
          col_select = -2L,
          col_names = c('group', 
@@ -212,14 +216,14 @@ biomarker_clean3 <- read_csv("C:/Users/csola/OneDrive/Desktop/Pstat 197 (Capston
                 ~ (scale(log10(.x))[, 1]))) %>%
 # I decided to add a column called subject, which gives a number to each individual to distinguish them from one another. This way we can sort them by who had the most outliers.
   mutate(subject = row_number()) %>%
-  select(subject, group, -ados, everything())
+  select(subject, group, everything(), -ados)
 # removed ados, don't need for question 2
 ```
 
 Here a data frame is created where we can analyze how many outliers each individual (subject) had. This is calculated by (|z| > 3) where z values greater than a 3 are outliers (as seen in preprocessing.R where the trim() function created takes the abs(x)). We can see that subject 154 in group TD had the most outliers at 157 outliers, and a total of 6 people had 100+ outliers. There are also only 2 subjects who had 0 outliers (one subject from group TD and the other from ASD). And for reference, the median of the amount of outliers each person had from both groups was 8.5 outliers.
 ```{r}
 biomarker3_long <- biomarker_clean3 %>%
-  pivot_longer(cols = -c(subject, group, ados), names_to = "protein", 
+  pivot_longer(cols = -c(subject, group), names_to = "protein", 
                values_to = "z")
 
 outliers_subject <- biomarker3_long %>%
