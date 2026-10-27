@@ -21,12 +21,16 @@ load('data/biomarker-clean.RData') View(biomarker_clean)
 Choose training/testing split at the beginning
 
 ```{r}
-# Split the data into 80% training and 20% testing immediately
-set.seed(101422)
-biomarker_split <- biomarker_clean %>%
-  initial_split(prop = 0.8)
 
-# Extract training and testing sets
+# Split the data into 80% training and 20% testing
+set.seed(101422)
+
+biomarker_split <- initial_split(
+  biomarker_clean,
+  prop = 0.8,
+  strata = group
+)
+
 train_data <- training(biomarker_split)
 test_data  <- testing(biomarker_split)
 
@@ -40,27 +44,21 @@ test_fn <- function(.df){
          var.equal = F)
 }
 
+# Run a t-test for each protein
 ttests_out <- train_data %>%
-  # drop ADOS score
   select(-ados) %>%
-  # arrange in long format
-  pivot_longer(-group, 
-               names_to = 'protein', 
-               values_to = 'level') %>%
-  # nest by protein
-  nest(data = c(level, group)) %>% 
-  # compute t tests
+  pivot_longer(
+    -group,
+    names_to = "protein",
+    values_to = "level"
+  ) %>%
+  nest(data = c(level, group)) %>%
   mutate(ttest = map(data, test_fn)) %>%
   unnest(ttest) %>%
-  # sort by p-value
-  arrange(p_value) %>%
-  # multiple testing correction
-  mutate(m = n(),
-         hm = log(m) + 1/(2*m) - digamma(1),
-         rank = row_number(),
-         p.adj = m*hm*p_value/rank)
+  mutate(p.adj = p.adjust(p_value, method = "BY")) %>%
+  arrange(p.adj)
 
-# select significant proteins
+# select top 10 significant proteins
 proteins_s1 <- ttests_out %>%
   slice_min(p.adj, n = 10) %>%
   pull(protein)
@@ -92,6 +90,13 @@ proteins_s2 <- rf_out$importance %>%
 # Find the overlapping proteins selected using training data only
 proteins_sstar <- intersect(proteins_s1, proteins_s2)
 
+# Check how many proteins were selected
+length(proteins_s1)
+length(proteins_s2)
+length(proteins_sstar)
+
+proteins_sstar
+
 # Prepare training data
 biomarker_sstar_train <- train_data %>%
   select(group, any_of(proteins_sstar)) %>%
@@ -106,43 +111,55 @@ fit <- glm(
   family = binomial()
 )
 
-# Define metrics
+
+# Define classification metrics
 class_metrics <- metric_set(
   sensitivity,
   specificity,
-  accuracy,
-  roc_auc
+  accuracy
 )
 
 # Prepare testing data
 biomarker_sstar_test <- test_data %>%
   select(group, any_of(proteins_sstar)) %>%
-  mutate(class = factor(group == "ASD",
-                        levels = c(FALSE, TRUE))) %>%
+  mutate(
+    class = factor(group == "ASD",
+                   levels = c(FALSE, TRUE))
+  ) %>%
   select(-group)
 
-# Generate predicted probabilities
+# Predict probabilities using selected proteins only
 biomarker_sstar_test <- biomarker_sstar_test %>%
   mutate(
-    pred = predict(fit,
-                   newdata = biomarker_sstar_test,
-                   type = "response")
+    pred = predict(
+      fit,
+      newdata = test_data %>%
+        select(any_of(proteins_sstar)),
+      type = "response"
+    ),
+    estimate = factor(
+      pred >= 0.5,
+      levels = c(FALSE, TRUE)
+    )
   )
 
-# Convert predicted probabilities into class predictions
-biomarker_sstar_test <- biomarker_sstar_test %>%
-  mutate(
-    estimate = factor(pred >= 0.5,
-                      levels = c(FALSE, TRUE))
-  )
-
-# Evaluate model performance
-class_metrics(
+# Sensitivity, specificity, and accuracy
+classification_results <- class_metrics(
   data = biomarker_sstar_test,
   truth = class,
   estimate = estimate,
+  event_level = "second"
+)
+
+# ROC AUC uses predicted probabilities, not class predictions
+auc_result <- roc_auc(
+  data = biomarker_sstar_test,
+  truth = class,
   pred,
   event_level = "second"
 )
+
+classification_results
+auc_result
 
 ```
