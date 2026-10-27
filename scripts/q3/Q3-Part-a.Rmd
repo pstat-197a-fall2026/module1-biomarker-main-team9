@@ -36,12 +36,13 @@ test_data  <- testing(biomarker_split)
 
 # MULTIPLE TESTING (only on training)
 # function to compute tests
-test_fn <- function(.df){
-  t_test(.df, 
-         formula = level ~ group,
-         order = c('ASD', 'TD'),
-         alternative = 'two-sided',
-         var.equal = F)
+test_fn <- function(.df) {
+  t_test(
+    .df,
+    formula = level ~ group,
+    order = c("ASD", "TD"),
+    alternative = "two-sided"
+  )
 }
 
 # Run a t-test for each protein
@@ -128,13 +129,12 @@ biomarker_sstar_test <- test_data %>%
   ) %>%
   select(-group)
 
-# Predict probabilities using selected proteins only
+# Predict probabilities on the test set
 biomarker_sstar_test <- biomarker_sstar_test %>%
   mutate(
     pred = predict(
       fit,
-      newdata = test_data %>%
-        select(any_of(proteins_sstar)),
+      newdata = biomarker_sstar_test,
       type = "response"
     ),
     estimate = factor(
