@@ -1,12 +1,3 @@
----
-title: "Q3_Part1"
-output: html_document
-editor_options: 
-  markdown: 
-    wrap: 72
----
-
-```{r}
 library(tidyverse) 
 library(infer) 
 library(randomForest) 
@@ -14,13 +5,8 @@ library(tidymodels)
 library(modelr) 
 library(yardstick)
 
-load('data/biomarker-clean.RData') View(biomarker_clean)
-```
+load('data/biomarker-clean.RData') 
 
-### Question 3, Part a
-Choose training/testing split at the beginning
-
-```{r}
 
 # Split the data into 80% training and 20% testing
 set.seed(101422)
@@ -162,4 +148,4 @@ auc_result <- roc_auc(
 classification_results
 auc_result
 
-```
+
