@@ -106,3 +106,6 @@ write.csv(comparison, "results/tables/q3b_comparison.csv", row.names = FALSE)
 write.csv(selected_proteins, "results/tables/q3b_selected_proteins.csv",
           row.names = FALSE)
 ```
+
+
+
