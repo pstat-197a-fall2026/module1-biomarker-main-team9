@@ -8,7 +8,7 @@ output:
 Clean
 ```{r, message=FALSE, warning=FALSE}
 library(tidyverse)
-load("../data/biomarker-clean.RData") 
+load("../../data/biomarker-clean.RData") 
 
 ls()
 dim(biomarker_clean)
@@ -16,7 +16,7 @@ dim(biomarker_clean)
 
 Raw
 ```{r, message=FALSE, warning=FALSE}
-biomarker_raw <- read_csv("../data/biomarker-raw.csv")
+biomarker_raw <- read_csv("../../data/biomarker-raw.csv")
 
 dim(biomarker_raw)
 ```
@@ -65,7 +65,7 @@ Code chunk explanation:
 From preprocessing.r:
 ```{r, message=FALSE, warning=FALSE}
 # get names
-var_names <- read_csv("../data/biomarker-raw.csv", 
+var_names <- read_csv("../../data/biomarker-raw.csv", 
                      col_names = F, 
                      n_max = 2, 
                      col_select = -(1:2)) %>%
@@ -77,7 +77,7 @@ var_names <- read_csv("../data/biomarker-raw.csv",
 
 
 # read in data
-biomarker_clean2 <- read_csv("../data/biomarker-raw.csv", 
+biomarker_clean2 <- read_csv("../../data/biomarker-raw.csv", 
          skip = 2,
          col_select = -2L,
          col_names = c('group', 
@@ -203,7 +203,7 @@ Answer:
 Removed trimming from preprocessing.R but left log10() and scale()
 ```{r, message=FALSE, warning=FALSE}
 # read in data
-biomarker_clean3 <- read_csv("../data/biomarker-raw.csv", 
+biomarker_clean3 <- read_csv("../../data/biomarker-raw.csv", 
          skip = 2,
          col_select = -2L,
          col_names = c('group', 
