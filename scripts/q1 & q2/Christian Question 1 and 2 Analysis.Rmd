@@ -20,6 +20,16 @@ biomarker_raw <- read_csv("../../data/biomarker-raw.csv")
 
 dim(biomarker_raw)
 ```
+
+Saves PNG  file every time a plot is created
+```{r, message=FALSE, warning=FALSE}
+knitr::opts_chunk$set(
+  fig.path = "../../results/graphs/q1_q2_",
+  dev = "png",
+  dpi = 180,
+  fig.width = 6.5)
+```
+
 From Slides:
 
 Background:
@@ -136,6 +146,11 @@ summary_log <- protein_sample_log %>%
     arrange(desc(skewness))
 summary_log
 
+
+# saves tables as csv files
+write_csv(summary_raw, "../../results/tables/q1_summary_raw.csv")
+write_csv(summary_log, "../../results/tables/q1_summary_log.csv")
+
 ```
 protein_sample_raw and protein_sample_log data frame analysis:
 I think the reason for log-transforming the protein levels in biomarker-raw.csv was to reduce skewness, so lets analyze the skewness before and after log-transforming.
@@ -163,9 +178,9 @@ Before the transformation, out of the 6 sampled proteins, 3 proteins showed righ
 
 
 Histogram Plots:
-```{r}
+```{r q1-raw-hist}
 library(ggplot2)
-protein_sample_raw %>%
+hist1 <- protein_sample_raw %>%
   ggplot(aes(x = level)) +
   geom_histogram(bins = 35, fill = 'skyblue', color = 'black') +
   # facet_wrap is used here instead of creating 6 different slides for protein_sample_raw
@@ -174,10 +189,11 @@ protein_sample_raw %>%
   facet_wrap(vars(protein), scales = "free") +
   labs(title = "Raw Protein Levels",
        x = "Protein Level", y = "Count")
+hist1
 ```
 
 
-```{r}
+```{r q1-log-hist}
 protein_sample_log %>%
   ggplot(aes(x = level)) +
   geom_histogram(bins = 35, fill = "skyblue", color = "black") +
@@ -236,6 +252,9 @@ outliers_subject
 
 median(outliers_subject$num_z_outliers)
 sum(outliers_subject$num_z_outliers > 8.5)
+
+# saves tables as csv files
+write_csv(outliers_subject, "../../results/tables/q2_outliers_per_subject.csv")
 ```
 
 
@@ -252,6 +271,8 @@ group_summary <- outliers_subject %>%
     max_outliers = max(num_z_outliers) )
 
 group_summary
+
+write_csv(group_summary, "../../results/tables/q2_group_summary.csv")
 ```
 Analysis:
 - Comparing each group (ASD and TD), the median number of outliers is 8.5 for both groups out of the 1,317 total proteins. 
@@ -260,7 +281,7 @@ Analysis:
 
 
 Boxplot of outliers per subject for each group:
-```{r}
+```{r q2-boxplot}
 outliers_subject %>%
   ggplot(aes(x = group, y = num_z_outliers, fill = group)) +
   geom_boxplot() +
