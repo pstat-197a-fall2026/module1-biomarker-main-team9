@@ -1,0 +1,162 @@
+---
+title: "Q3-Part-a"
+output: html_document
+---
+
+### Question 3, Part a
+
+```{r}
+library(tidyverse) 
+library(infer) 
+library(randomForest) 
+library(tidymodels) 
+library(modelr) 
+library(yardstick)
+
+load('data/biomarker-clean.RData') 
+
+
+# Split the data into 80% training and 20% testing
+set.seed(101422)
+
+biomarker_split <- initial_split(
+  biomarker_clean,
+  prop = 0.8,
+  strata = group
+)
+
+train_data <- training(biomarker_split)
+test_data  <- testing(biomarker_split)
+
+# MULTIPLE TESTING (only on training)
+# function to compute tests
+test_fn <- function(.df) {
+  t_test(
+    .df,
+    formula = level ~ group,
+    order = c("ASD", "TD"),
+    alternative = "two-sided"
+  )
+}
+
+# Run a t-test for each protein
+ttests_out <- train_data %>%
+  select(-ados) %>%
+  pivot_longer(
+    -group,
+    names_to = "protein",
+    values_to = "level"
+  ) %>%
+  nest(data = c(level, group)) %>%
+  mutate(ttest = map(data, test_fn)) %>%
+  unnest(ttest) %>%
+  mutate(p.adj = p.adjust(p_value, method = "BY")) %>%
+  arrange(p.adj)
+
+# select top 10 significant proteins
+proteins_s1 <- ttests_out %>%
+  slice_min(p.adj, n = 10) %>%
+  pull(protein)
+
+
+# RANDOM FOREST (only on training)
+
+# store predictors and response separately using train_data
+predictors <- train_data %>%
+  select(-c(group, ados))
+
+response <- train_data %>% pull(group) %>% factor()
+
+# fit RF
+set.seed(101422)
+rf_out <- randomForest(x = predictors, 
+                       y = response, 
+                       ntree = 1000, 
+                       importance = T)
+
+# compute importance scores
+proteins_s2 <- rf_out$importance %>% 
+  as_tibble() %>%
+  mutate(protein = rownames(rf_out$importance)) %>%
+  slice_max(MeanDecreaseGini, n = 10) %>%
+  pull(protein)
+
+# LOGISTIC REG & EVAL
+# Find the overlapping proteins selected using training data only
+proteins_sstar <- intersect(proteins_s1, proteins_s2)
+
+# Check how many proteins were selected
+length(proteins_s1)
+length(proteins_s2)
+length(proteins_sstar)
+
+proteins_sstar
+
+# Prepare training data
+biomarker_sstar_train <- train_data %>%
+  select(group, any_of(proteins_sstar)) %>%
+  mutate(class = factor(group == "ASD",
+                        levels = c(FALSE, TRUE))) %>%
+  select(-group)
+
+# Fit logistic regression model
+fit <- glm(
+  class ~ .,
+  data = biomarker_sstar_train,
+  family = binomial()
+)
+
+
+# Define classification metrics
+class_metrics <- metric_set(
+  sensitivity,
+  specificity,
+  accuracy
+)
+
+# Prepare testing data
+biomarker_sstar_test <- test_data %>%
+  select(group, any_of(proteins_sstar)) %>%
+  mutate(
+    class = factor(group == "ASD",
+                   levels = c(FALSE, TRUE))
+  ) %>%
+  select(-group)
+
+# Predict probabilities on the test set
+biomarker_sstar_test <- biomarker_sstar_test %>%
+  mutate(
+    pred = predict(
+      fit,
+      newdata = biomarker_sstar_test,
+      type = "response"
+    ),
+    estimate = factor(
+      pred >= 0.5,
+      levels = c(FALSE, TRUE)
+    )
+  )
+
+# Sensitivity, specificity, and accuracy
+classification_results <- class_metrics(
+  data = biomarker_sstar_test,
+  truth = class,
+  estimate = estimate,
+  event_level = "second"
+)
+
+# ROC AUC uses predicted probabilities, not class predictions
+auc_result <- roc_auc(
+  data = biomarker_sstar_test,
+  truth = class,
+  pred,
+  event_level = "second"
+)
+
+classification_results
+auc_result
+
+
+
+```
+
