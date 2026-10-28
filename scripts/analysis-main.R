@@ -11,18 +11,18 @@ library(yardstick)
 # Load data once
 load("data/biomarker-clean.RData")
 
-# Run Question 1
+# Question 1
 
-# Run Question 2
+# Question 2
 
 
-# Run Question 3(a)
+# Question 3(a): Training/test split and protein selection
 source("scripts/q3/Q3-Part-a.R")
 
-# Run Question 3(b)
+# Question 3(b)
 
 
-# Run Question 3(c)
+# Question 3(c)
 
 
-# Run Question 4
+# Question 4

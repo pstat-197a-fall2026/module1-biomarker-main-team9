@@ -1,3 +1,5 @@
+# Question 3(a): Training/test split and protein selection
+
 library(tidyverse) 
 library(infer) 
 library(randomForest) 
