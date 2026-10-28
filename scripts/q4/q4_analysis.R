@@ -336,13 +336,21 @@ plot_q4_results <- function(results) {
   list(selection = selection_plot, difference = difference_plot)
 }
 
-# 11. Run the analysis when this file is executed directly
-# Sourcing defines the functions without refitting, so the report can call the
-# same analysis once. Optional table exports contain only the final summaries.
-if (sys.nframe() == 0L) {
-  q4_results <- run_q4_analysis()
-  print(q4_results$comparison, digits = 4)
-  print(q4_results$selected_proteins, row.names = FALSE)
-  cat("Small-panel accuracy difference:", q4_results$small_accuracy_difference,
-      "\nApproximate corrected 95% interval:", q4_results$small_difference_interval, "\n")
-}
+# Run analysis ------------------------------------------------
+
+q4_results <- run_q4_analysis(
+  project_root = ".",
+  save_tables = FALSE
+)
+
+# Model comparison
+print(q4_results$comparison)
+
+# Selected proteins
+print(q4_results$selected_proteins)
+
+# Figures
+q4_plots <- plot_q4_results(q4_results)
+
+print(q4_plots$selection)
+print(q4_plots$difference)

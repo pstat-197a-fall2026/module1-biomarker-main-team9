@@ -1,28 +1,53 @@
-# scripts/analysis-main.R
+# PSTAT 197A - Module 1 Biomarker Analysis
+# Team 9
 
-# Load packages
+# Setup 
+
 library(tidyverse)
 library(infer)
 library(randomForest)
 library(tidymodels)
 library(modelr)
 library(yardstick)
+library(glmnet)
 
-# Load data once
+# Data preprocessing 
+
 load("data/biomarker-clean.RData")
 
-# Question 1
 
-# Question 2
+# Questions 1 & 2: Log transformation and outliers 
 
-
-# Question 3(a): Training/test split and protein selection
-source("scripts/q3/Q3-Part-a.R")
-
-# Question 3(b)
+source(
+  "scripts/q1 & q2/Christian Question 1 and 2 Analysis.R",
+  local = new.env(parent = globalenv())
+)
 
 
-# Question 3(c)
+# Question 3: Methodological variations 
+
+# (a) Training-only feature selection
+source(
+  "scripts/q3/Q3-Part-a.R",
+  local = new.env(parent = globalenv())
+)
+
+# (b) Larger protein panels
+source(
+  "scripts/q3/Q3-Part-b.R",
+  local = new.env(parent = globalenv())
+)
+
+# (c) Fuzzy intersection
+source(
+  "scripts/q3/Q3-Part-C.R",
+  local = new.env(parent = globalenv())
+)
 
 
-# Question 4
+# Question 4: Alternative classifier 
+
+source(
+  "scripts/q4/q4_analysis.R",
+  local = new.env(parent = globalenv())
+)
