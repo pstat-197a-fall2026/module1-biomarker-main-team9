@@ -8,17 +8,17 @@ output:
 Clean
 ```{r, message=FALSE, warning=FALSE}
 library(tidyverse)
-load("../../data/biomarker-clean.RData") 
+load("data/biomarker-clean.RData") 
 
-ls()
-dim(biomarker_clean)
+#ls()
+#dim(biomarker_clean)
 ```
 
 Raw
 ```{r, message=FALSE, warning=FALSE}
 biomarker_raw <- read_csv("../../data/biomarker-raw.csv")
 
-dim(biomarker_raw)
+#dim(biomarker_raw)
 ```
 
 Saves PNG  file every time a plot is created
@@ -108,7 +108,7 @@ protein_raw <- select(biomarker_clean2, -group, -ados)
 
 set.seed(888)
 protein_sample <- sample(protein_raw, 6)
-colnames(protein_sample)
+#colnames(protein_sample)
 #protein_sample
 
 # level represents the amount of the specific protein in the person.
@@ -194,12 +194,13 @@ hist1
 
 
 ```{r q1-log-hist}
-protein_sample_log %>%
+hist2 <- protein_sample_log %>%
   ggplot(aes(x = level)) +
   geom_histogram(bins = 35, fill = "skyblue", color = "black") +
   facet_wrap(vars(protein), scales = "free") +
   labs(title = "Log Protein Levels",
        x = "Protein Level", y = "Count")
+hist2
 ```
 protein_sample_raw and protein_sample_log histogram analysis:
 - Visually we can see log protein levels improved the skewness of most of the sampled proteins.
@@ -282,12 +283,13 @@ Analysis:
 
 Boxplot of outliers per subject for each group:
 ```{r q2-boxplot}
-outliers_subject %>%
+box1 <- outliers_subject %>%
   ggplot(aes(x = group, y = num_z_outliers, fill = group)) +
   geom_boxplot() +
   geom_jitter(width = .1, alpha = .5, size = 1) +
   labs(title = "Outliers (|z| > 3) per Subject by Group",
     x = "Group", y = "Number of outliers per subject")
+box1
 ```
 
 - The dots are not in a stright line due to geom_jitter() to avoid overlapping. Darker dots mean there is a higher concentration of outliers. 

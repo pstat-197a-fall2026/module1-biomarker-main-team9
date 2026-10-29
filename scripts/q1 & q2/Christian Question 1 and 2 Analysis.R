@@ -1,28 +1,20 @@
 ## ----message=FALSE, warning=FALSE---------------
 library(tidyverse)
-load("../../data/biomarker-clean.RData") 
+load("data/biomarker-clean.RData") 
 
-ls()
-dim(biomarker_clean)
-
-
-## ----message=FALSE, warning=FALSE---------------
-biomarker_raw <- read_csv("../../data/biomarker-raw.csv")
-
-dim(biomarker_raw)
+#ls()
+#dim(biomarker_clean)
 
 
 ## ----message=FALSE, warning=FALSE---------------
-knitr::opts_chunk$set(
-  fig.path = "../../results/graphs/q1_q2_",
-  dev = "png",
-  dpi = 180,
-  fig.width = 6.5)
+biomarker_raw <- read_csv("data/biomarker-raw.csv")
+
+#dim(biomarker_raw)
 
 
 ## ----message=FALSE, warning=FALSE---------------
 # get names
-var_names <- read_csv("../../data/biomarker-raw.csv", 
+var_names <- read_csv("data/biomarker-raw.csv", 
                      col_names = F, 
                      n_max = 2, 
                      col_select = -(1:2)) %>%
@@ -34,7 +26,7 @@ var_names <- read_csv("../../data/biomarker-raw.csv",
 
 
 # read in data
-biomarker_clean2 <- read_csv("../../data/biomarker-raw.csv", 
+biomarker_clean2 <- read_csv("data/biomarker-raw.csv", 
          skip = 2,
          col_select = -2L,
          col_names = c('group', 
@@ -54,7 +46,7 @@ protein_raw <- select(biomarker_clean2, -group, -ados)
 
 set.seed(888)
 protein_sample <- sample(protein_raw, 6)
-colnames(protein_sample)
+#colnames(protein_sample)
 #protein_sample
 
 # level represents the amount of the specific protein in the person.
@@ -72,7 +64,7 @@ summary_raw <- protein_sample_raw %>%
             skewness = ((3*(mean(level) - median(level))) / sd(level))
             ) %>%
   arrange(desc(skewness))
-summary_raw
+print(summary_raw)
 
 
 protein_sample_log <- protein_sample %>%
@@ -90,12 +82,12 @@ summary_log <- protein_sample_log %>%
               skewness = ((3*(mean(level) - median(level))) / sd(level))
               ) %>%
     arrange(desc(skewness))
-summary_log
+print(summary_log)
 
 
 # saves tables as csv files
-write_csv(summary_raw, "../../results/tables/q1_summary_raw.csv")
-write_csv(summary_log, "../../results/tables/q1_summary_log.csv")
+write_csv(summary_raw, "results/tables/q1_summary_raw.csv")
+write_csv(summary_log, "results/tables/q1_summary_log.csv")
 
 
 
@@ -110,21 +102,21 @@ hist1 <- protein_sample_raw %>%
   facet_wrap(vars(protein), scales = "free") +
   labs(title = "Raw Protein Levels",
        x = "Protein Level", y = "Count")
-hist1
+print(hist1)
 
 
 ## ----q1-log-hist--------------------------------
-protein_sample_log %>%
+hist2 <- protein_sample_log %>%
   ggplot(aes(x = level)) +
   geom_histogram(bins = 35, fill = "skyblue", color = "black") +
   facet_wrap(vars(protein), scales = "free") +
   labs(title = "Log Protein Levels",
        x = "Protein Level", y = "Count")
-
+print(hist2)
 
 ## ----message=FALSE, warning=FALSE---------------
 # read in data
-biomarker_clean3 <- read_csv("../../data/biomarker-raw.csv", 
+biomarker_clean3 <- read_csv("data/biomarker-raw.csv", 
          skip = 2,
          col_select = -2L,
          col_names = c('group', 
@@ -152,13 +144,13 @@ outliers_subject <- biomarker3_long %>%
     num_z_outliers = sum(abs(z) > 3, na.rm = TRUE),
     num_z_outliers_perc = ((num_z_outliers / 1317) * 100)) %>%
   arrange(desc(num_z_outliers))
-outliers_subject
+print(head(outliers_subject, 10))
 
-median(outliers_subject$num_z_outliers)
-sum(outliers_subject$num_z_outliers > 8.5)
+print(median(outliers_subject$num_z_outliers))
+print(sum(outliers_subject$num_z_outliers > 8.5))
 
 # saves tables as csv files
-write_csv(outliers_subject, "../../results/tables/q2_outliers_per_subject.csv")
+write_csv(outliers_subject, "results/tables/q2_outliers_per_subject.csv")
 
 
 ## -----------------------------------------------
@@ -172,16 +164,16 @@ group_summary <- outliers_subject %>%
     # the max amount of outliers a single person had out of the group.
     max_outliers = max(num_z_outliers) )
 
-group_summary
+print(group_summary)
 
-write_csv(group_summary, "../../results/tables/q2_group_summary.csv")
+write_csv(group_summary, "results/tables/q2_group_summary.csv")
 
 
 ## ----q2-boxplot---------------------------------
-outliers_subject %>%
+box1 <- outliers_subject %>%
   ggplot(aes(x = group, y = num_z_outliers, fill = group)) +
   geom_boxplot() +
   geom_jitter(width = .1, alpha = .5, size = 1) +
   labs(title = "Outliers (|z| > 3) per Subject by Group",
     x = "Group", y = "Number of outliers per subject")
-
+print(box1)
