@@ -2,7 +2,7 @@
 title: "Question 3C"
 output: pdf_document
 ---
-```{r setup, message=FALSE}
+```{r setup, message=FALSE, warning=FALSE}
 library(tidyverse)
 library(infer)
 library(randomForest)
@@ -15,6 +15,8 @@ knitr::opts_knit$set(root.dir = normalizePath("../.."))
 # Data Loading
 ```{r}
 load("data/biomarker-clean.RData")
+
+# Use the same split as Parts (a) and (b)
 set.seed(101422)
 biomarker_split <- initial_split(biomarker_clean, prop = 0.8, strata = group)
 train_data <- training(biomarker_split)
@@ -47,15 +49,15 @@ rf_out <- randomForest(
 )
 
 # Break ties so each protein gets a unique rank
-rank_tt <- ttests_out %>%
+tt_ranks <- ttests_out %>%
   transmute(protein, rank_tt = row_number())
 
-rank_rf <- rf_out$importance %>%
+rf_ranks <- rf_out$importance %>%
   as_tibble(rownames = "protein") %>%
   arrange(desc(MeanDecreaseGini), protein) %>%
   transmute(protein, rank_rf = row_number())
 
-ranks <- inner_join(rank_tt, rank_rf, by = "protein")
+ranks <- inner_join(tt_ranks, rf_ranks, by = "protein")
 ```
 
 # 2. Turn each rank into a membership score
@@ -75,12 +77,12 @@ fuzzy <- fuzzy %>%
   mutate(
     # standard fuzzy intersection, only as strong as the weakest method
     mu_min = pmin(mu_tt, mu_rf),
-    # product rule on the 0-1 scale
+    # geometric mean of the two scores
     mu_geo = sqrt(mu_tt * mu_rf)
   ) %>%
-  arrange(desc(mu_min))
+  arrange(desc(mu_min), desc(mu_geo))
 
-fuzzy %>% filter(mu_geo > 0) %>% head(20)
+print(fuzzy %>% filter(mu_geo > 0) %>% head(20), n = 20)
 ```
 
 # 4. Set a threshold to get each protein panel
@@ -88,13 +90,13 @@ fuzzy %>% filter(mu_geo > 0) %>% head(20)
 threshold <- 0.5
 
 panels <- list(
-  "Hard (top 10)" = intersect(head(ttests_out$protein, 10),
-                              rank_rf %>% filter(rank_rf <= 10) %>% pull(protein)),
+  "Hard (top 10)" = intersect(head(tt_ranks$protein, 10),
+                              head(rf_ranks$protein, 10)),
   "Fuzzy min" = fuzzy %>% filter(mu_min >= threshold) %>% pull(protein),
-  "Fuzzy product" = fuzzy %>% filter(mu_geo >= threshold) %>% pull(protein)
+  "Fuzzy geometric mean" = fuzzy %>% filter(mu_geo >= threshold) %>% pull(protein)
 )
 
-lengths(panels)
+print(lengths(panels))
 ```
 
 # 5. Fit logistic regression and evaluate on the test set
@@ -129,11 +131,75 @@ for (rule in names(panels)) {
   ))
 }
 
-knitr::kable(comparison, digits = 3)
-knitr::kable(selected_proteins)
-
 # Save the results
 write.csv(comparison, "results/tables/q3c_comparison.csv", row.names = FALSE)
 write.csv(selected_proteins, "results/tables/q3c_selected_proteins.csv",
           row.names = FALSE)
+```
+
+```{r}
+knitr::kable(comparison, digits = 3)
+```
+
+```{r}
+knitr::kable(selected_proteins)
+```
+
+# 6. Plots
+```{r fig-membership, fig.width=7, fig.height=4.5}
+rule_colors <- c("Hard (top 10)" = "#2a78d6",
+                 "Fuzzy min" = "#eb6834",
+                 "Fuzzy geometric mean" = "#1baf7a")
+
+# Membership scores from each method for every protein in any panel
+plot_membership <- fuzzy %>%
+  filter(protein %in% unlist(panels)) %>%
+  mutate(protein = fct_reorder(protein, mu_geo)) %>%
+  pivot_longer(c(mu_tt, mu_rf), names_to = "method", values_to = "score") %>%
+  mutate(method = factor(recode(method, mu_tt = "t-test",
+                                mu_rf = "Random forest"),
+                         levels = c("t-test", "Random forest")))
+
+fig_membership <- ggplot(plot_membership, aes(x = score, y = protein)) +
+  geom_line(aes(group = protein), color = "grey75", linewidth = 0.7) +
+  geom_point(aes(color = method), size = 3) +
+  geom_vline(xintercept = threshold, linetype = "dashed", color = "grey40") +
+  scale_color_manual(values = c("t-test" = "#2a78d6",
+                                "Random forest" = "#eb6834")) +
+  scale_x_continuous(limits = c(0, 1)) +
+  labs(title = "Fuzzy membership scores for selected proteins",
+       subtitle = paste0("Linear membership with depth K = ", K,
+                         "; dashed line is the 0.5 threshold"),
+       x = "Membership score", y = NULL, color = "Method") +
+  theme_minimal() +
+  theme(legend.position = "top", panel.grid.minor = element_blank())
+fig_membership
+```
+
+```{r fig-metrics, fig.width=7, fig.height=4.5}
+# Test-set metrics for each rule
+plot_metrics <- comparison %>%
+  pivot_longer(c(accuracy, sensitivity, specificity, AUROC),
+               names_to = "metric", values_to = "value") %>%
+  mutate(rule = factor(rule, levels = names(panels)),
+         metric = factor(metric, levels = c("accuracy", "sensitivity",
+                                            "specificity", "AUROC")))
+
+fig_metrics <- ggplot(plot_metrics, aes(x = metric, y = value, fill = rule)) +
+  geom_col(position = position_dodge(width = 0.8), width = 0.75) +
+  geom_text(aes(label = sprintf("%.2f", value)),
+            position = position_dodge(width = 0.8), vjust = -0.4, size = 3) +
+  scale_fill_manual(values = rule_colors) +
+  scale_y_continuous(limits = c(0, 1)) +
+  labs(title = "Test-set performance by intersection rule",
+       x = NULL, y = NULL, fill = "Rule") +
+  theme_minimal() +
+  theme(legend.position = "top", panel.grid.major.x = element_blank(),
+        panel.grid.minor = element_blank())
+fig_metrics
+
+ggsave("results/graphs/q3c_fig-membership.png", fig_membership,
+       width = 7, height = 4.5, dpi = 150, bg = "white")
+ggsave("results/graphs/q3c_fig-metrics.png", fig_metrics,
+       width = 7, height = 4.5, dpi = 150, bg = "white")
 ```

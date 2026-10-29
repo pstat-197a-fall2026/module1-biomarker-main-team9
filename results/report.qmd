@@ -55,11 +55,56 @@ As described in the README, our simplified in-class procedure retains 192 variab
 
 #### Question 1: Log transformation
 
-<!-- Q1 results and figures will be added here. -->
+**Methodology**
+
+To understand the effect of log-transforming the protein levels in biomarker-raw.csv, we took a sample of six proteins from the raw dataset and removed the non-protein columns. We then created two separate versions of the data (the raw numeric values and the base-10 log-transformed values) for comparison. For both versions we calculated the summary statistics (minimum, maximum, mean, median, and standard deviation) as well as Pearson’s second coefficient of skewness $\frac{3(\mu - \tilde{x})}{\sigma}$. Lastly, we generated histograms for the raw and log-transformed values to visually compare the distributions. 
+
+
+#### Results
+
+For the raw dataset, using Pearson's second coefficient of skewness, where values greater than 0.5 indicate right skew and values less than -0.5 indicate left skew, three of the six proteins we sampled showed strong right skewness (Carbonic anhydrase III = 0.96, N-terminal pro-BNP = 0.94, BCAR3 = 0.84), while Cyclin B1 (0.43) fell just below the threshold, and PPase (-0.15) and Bone proteoglycan II (0.14) were essentially symmetric. The raw standard deviations ranged from 550 to 12,009. After log10 transformation, the three strongly-skewed proteins dropped greatly (N-terminal pro-BNP to 0.38, BCAR3 to 0.46), and the standard deviations compressed from 0.07 to 0.23 across all six proteins.
+
+![](graphs/q1_q2_q1-raw-hist-1.png){#q1_q2_q1-raw-hist-1 width=“85%”}
+
+![](graphs/q1_q2_q1-log-hist-1.png){#q1_q2_q1-log-hist-1 width=“85%”}
+
+
+#### Interpretation
+
+The reason for log-transforming the protein levels in biomarker-raw.csv was to correct right skewness and stabilize variance to make sure scaling and trimming worked properly. But log-transforming the protein levels has some downsides. For example, PPase was already symmetric before the log transformation but was pushed into a mild left skew (from -0.15 to -0.55) because log10 over-corrected it. Additionally, Cyclin B1's skewness metric increased slightly (0.43 to 0.59), due to an extreme outlier. Overall, despite these problems, the log-transformation was overall necessary for scaling and trimming.
+
 
 #### Question 2: Outlier analysis
 
-<!-- Q2 results and figures will be added here. -->
+**Methodology**
+
+To understand if specific subjects are outliers, we first removed trim() from the preprocessing code chunk and kept the log-transformation and scaling. We considered an outlier to be any z-value where $|z| > 3$. We then reshaped the data to a long format and tabulated the number of outliers for each individual subject. Then we calculated the summary statistics (mean, median, standard deviation, and maximum) for the outlier counts by group. Lastly, we then generated a boxplot to compare the distributions visually.
+
+
+#### Results
+
+Across all 154 subjects, the median number of proteins that were outliers per subject was 8.5. Subject 154 in the TD group had 157 outlying proteins, and 6 subjects across both groups had more than 100. Only 2 subjects (one from each group) had zero outliers.
+
+```{r}
+#| label: tbl-q2-group-summary
+#| tbl-cap: "Summary of outliers per subject by group."
+group_summary <- read.csv("tables/q2_group_summary.csv", check.names = FALSE)
+knitr::kable(group_summary, digits = 2)
+```
+
+#### Interpretation
+
+There were specific subjects that stood out as outliers. While the median subject had 8.5 outlying proteins, subject 154 in the TD group had 157 extreme values, and 6 subjects across both groups had 100 or more. In total, 77 of the 154 subjects had more than 8.5 outliers, and only 2 subjects (one from each group) had zero. If we look at the median of both groups, they both had exactly 8.5 for ASD and TD. However, looking at the mean, the most extreme cases are concentrated in the TD group. The mean number of outliers was 17.6 for TD compared to 13.25 for ASD, and the TD standard deviation was far larger (29.2 vs. 19.8). Overall, the median subject in both groups has the same number of outliers, but group TD has more extreme outliers.
+
+```{r}
+#| label: tbl-q2-top-outliers
+#| tbl-cap: "Top 10 subjects with the most outliers."
+outliers_subject <- read.csv("tables/q2_outliers_per_subject.csv", check.names = FALSE)
+knitr::kable(head(outliers_subject, 10), digits = 2)
+```
+
+![](graphs/q1_q2_q2-boxplot-1.png){#q1_q2_q2-boxplot-1 width=“85%”}
+
 
 ### Methodological variations
 
@@ -130,11 +175,94 @@ Using the intersection of statistical testing and random forest importance provi
 
 #### Question 3(b): Larger protein panels
 
-<!-- Q3(b) results and tables will be added here. -->
+**Methodology**
+
+To examine whether considering more proteins improves prediction, we compared selecting the top ten and top twenty proteins from each method. We used the same 80/20 training/test split as Part (a), and protein selection was performed using only the training data. Proteins were ranked by Benjamini–Yekutieli-adjusted t-test p-values and random forest MeanDecreaseGini importance. When adjusted p-values were tied, raw p-values were used to instead, followed by protein names. The random forest was fitted once so both panel sizes used the same rankings.
+
+For each comparison, only proteins appearing in both lists were retained. A logistic regression model was then fitted using these proteins and the training data. Both models were evaluated on the same testing set, with predicted probabilities of at least 0.5 classified as ASD.
+
+#### Results
+
+Selecting the top ten proteins from each method produced a panel of six proteins: **DERM, Calcineurin, MAPK2, gp130 (soluble), MAPK14, and IgD**. Selecting the top twenty increased the panel to eleven proteins. This larger panel included the original six proteins and added **FSTL1, CXCL16 (soluble), TSP4, Notch 1, and Coagulation Factor IX**.
+
+| Proteins selected per method | Final panel size | Accuracy | Sensitivity | Specificity | ROC AUC |
+|------------|------------|------------|------------|------------|------------|
+| Top 10 | 6 | 68.75% | 56.25% | 81.25% | 0.715 |
+| Top 20 | 11 | 68.75% | 56.25% | 81.25% | 0.684 |
+
+Both models correctly classified 22 of the 32 testing observations. Each identified 9 of 16 ASD observations and 13 of 16 TD observations. Accuracy, sensitivity, and specificity stays unchanged, while ROC AUC decreased from 0.715 to 0.684. These results compare the two panels fitted within Part (b); its top-ten panel and results differ from those reported in Part (a).
+
+#### Interpretation
+
+Increasing the number of candidate proteins did not improve prediction on this testing set. The larger panel used five additional proteins but achieved the same classification accuracy. Its lower ROC AUC also suggests that it was slightly less effective at ranking ASD observations above TD observations by predicted probability. Both models were better at identifying TD observations than ASD observations, as shown by their higher specificity than sensitivity.
+
+The six-protein panel therefore provided a simpler model with comparable accuracy and a slightly higher ROC AUC in this comparison. However, the results come from one split with only 32 testing observations, so they do not show that the smaller panel will always perform better. Also, although protein selection and model fitting used training data only, the shared preprocessing script scaled and clipped the full dataset before splitting.
 
 #### Question 3(c): Fuzzy intersection
 
-<!-- Q3(c) results and tables will be added here. -->
+```{r}
+# Read saved Q3(c) summaries from scripts/q3/Q3-Part-C.R
+q3c_comparison <- read.csv("results/tables/q3c_comparison.csv", check.names = FALSE)
+q3c_selected <- read.csv("results/tables/q3c_selected_proteins.csv", check.names = FALSE)
+percent <- function(x) sprintf("%.1f%%", 100 * x)
+```
+
+**Methodology**
+
+A hard intersection keeps a protein only if it is in the top ten of *both* the t-test and random forest rankings, so a protein ranked 11th by one method is dropped no matter how strongly the other method ranks it. To soften this rule, we used the same 80/20 training/test split as Q3(a) and kept the full ranking of all proteins from each method on the training data. Each rank $r$ was converted to a membership score between 0 and 1,
+
+$$
+\mu(r) = \max\left(0,\ 1 - \frac{r - 1}{K}\right), \qquad K = 30,
+$$
+
+so the top-ranked protein scores 1 and scores fall linearly to 0 after rank 30. We combined the two scores in two ways:
+
+-   **Fuzzy min**, $\min(\mu_{t}, \mu_{RF})$, the standard fuzzy intersection: a protein is only as strong as its weaker ranking.
+-   **Fuzzy geometric mean**, $\sqrt{\mu_{t} \cdot \mu_{RF}}$, which lets a strong ranking from one method partly make up for a weaker ranking from the other.
+
+Proteins with a combined score of at least 0.5 formed the panel. For the min rule, this means both ranks must be 16 or better. For the geometric mean, it is equivalent to requiring a product of scores of at least 0.25. Each panel was used to fit a logistic regression on the training set and was evaluated on the held-out test set, with ASD as the positive class.
+
+**Results**
+
+```{r}
+#| label: tbl-q3c-comparison
+#| tbl-cap: "Q3(c) test-set performance of each intersection rule (training-only selection, 80/20 split)."
+knitr::kable(
+  data.frame(
+    Rule = q3c_comparison$rule,
+    Proteins = q3c_comparison$panel_size,
+    Accuracy = percent(q3c_comparison$accuracy),
+    Sensitivity = percent(q3c_comparison$sensitivity),
+    Specificity = percent(q3c_comparison$specificity),
+    AUROC = sprintf("%.3f", q3c_comparison$AUROC)
+  ),
+  align = c("l", rep("r", 5))
+)
+```
+
+```{r}
+#| label: tbl-q3c-proteins
+#| tbl-cap: "Proteins selected under each intersection rule."
+q3c_selected %>%
+  group_by(rule = factor(rule, levels = unique(rule))) %>%
+  summarize(proteins = paste(protein, collapse = ", ")) %>%
+  rename(Rule = rule, Proteins = proteins) %>%
+  knitr::kable()
+```
+
+The hard intersection selected `r q3c_comparison$panel_size[1]` proteins (@tbl-q3c-proteins). The fuzzy min rule kept the same six and added only TSP4, which ranked 15th by t-test and 10th by random forest. Its test-set performance was identical to the hard intersection: `r percent(q3c_comparison$accuracy[2])` accuracy and an AUROC of `r sprintf("%.3f", q3c_comparison$AUROC[2])` (@tbl-q3c-comparison).
+
+The geometric mean rule was more permissive and selected `r q3c_comparison$panel_size[3]` proteins. Besides TSP4, it added Notch 1, FSTL1, and soluble CXCL16. FSTL1 and CXCL16 ranked 4th and 5th by t-test but only 19th and 20th by random forest (@fig-q3c-membership), so they passed only because the geometric mean let one strong ranking make up for a weak one. This larger panel performed slightly worse: accuracy fell to `r percent(q3c_comparison$accuracy[3])`, specificity fell from `r percent(q3c_comparison$specificity[1])` to `r percent(q3c_comparison$specificity[3])`, and AUROC fell to `r sprintf("%.3f", q3c_comparison$AUROC[3])`. Sensitivity was unchanged at `r percent(q3c_comparison$sensitivity[3])` (@fig-q3c-metrics).
+
+![Membership scores from each selection method for every protein selected by at least one rule, ordered by geometric mean. The dashed line marks the 0.5 threshold.](graphs/q3c_fig-membership.png){#fig-q3c-membership width="85%"}
+
+![Test-set performance by intersection rule.](graphs/q3c_fig-metrics.png){#fig-q3c-metrics width="85%"}
+
+**Interpretation**
+
+Switching to a fuzzy intersection changed the panel more than it changed performance. The six proteins in the hard intersection (DERM, Calcineurin, MAPK2, gp130, MAPK14, and IgD) scored highly under both methods and were kept by every rule, so this core panel is not sensitive to how strictly the rankings are combined. Loosening the rule added proteins that only one method favored, and those additions did not improve prediction. Under the geometric mean rule, they slightly reduced specificity and AUROC. This matches Q3(b): adding proteins beyond the core panel brings in noise rather than useful signal.
+
+These differences should not be overinterpreted. The test set contains only 32 subjects, so one misclassified subject changes accuracy by about 3.1 percentage points; the drop from `r percent(q3c_comparison$accuracy[1])` to `r percent(q3c_comparison$accuracy[3])` is a single subject. The results also come from one train/test split, and the depth $K = 30$ and the 0.5 threshold were chosen by us rather than tuned. All three rules fall well below the 83.9% accuracy of the in-class analysis, because that analysis selected proteins using all subjects (see Q3(a)), not because of the intersection rule.
 
 ### Improved classifier
 
@@ -142,8 +270,8 @@ Using the intersection of statistical testing and random forest importance provi
 
 ```{r}
 # Read saved summaries; rendering does not rerun the models.
-comparison <- read.csv("tables/q4_model_comparison.csv", check.names = FALSE)
-selected <- read.csv("tables/q4_selected_proteins.csv", check.names = FALSE)
+comparison <- read.csv("results/tables/q4_model_comparison.csv", check.names = FALSE)
+selected <- read.csv("results/tables/q4_selected_proteins.csv", check.names = FALSE)
 percent <- function(x) sprintf("%.1f%%", 100 * x)
 ```
 
