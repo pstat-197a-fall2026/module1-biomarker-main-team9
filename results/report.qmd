@@ -55,11 +55,56 @@ As described in the README, our simplified in-class procedure retains 192 variab
 
 #### Question 1: Log transformation
 
-<!-- Q1 results and figures will be added here. -->
+**Methodology**
+
+To understand the effect of log-transforming the protein levels in biomarker-raw.csv, we took a sample of six proteins from the raw dataset and removed the non-protein columns. We then created two separate versions of the data (the raw numeric values and the base-10 log-transformed values) for comparison. For both versions we calculated the summary statistics (minimum, maximum, mean, median, and standard deviation) as well as Pearson’s second coefficient of skewness $\frac{3(\mu - \tilde{x})}{\sigma}$. Lastly, we generated histograms for the raw and log-transformed values to visually compare the distributions. 
+
+
+#### Results
+
+For the raw dataset, using Pearson's second coefficient of skewness, where values greater than 0.5 indicate right skew and values less than -0.5 indicate left skew, three of the six proteins we sampled showed strong right skewness (Carbonic anhydrase III = 0.96, N-terminal pro-BNP = 0.94, BCAR3 = 0.84), while Cyclin B1 (0.43) fell just below the threshold, and PPase (-0.15) and Bone proteoglycan II (0.14) were essentially symmetric. The raw standard deviations ranged from 550 to 12,009. After log10 transformation, the three strongly-skewed proteins dropped greatly (N-terminal pro-BNP to 0.38, BCAR3 to 0.46), and the standard deviations compressed from 0.07 to 0.23 across all six proteins.
+
+![](graphs/q1_q2_q1-raw-hist-1.png){#q1_q2_q1-raw-hist-1 width=“85%”}
+
+![](graphs/q1_q2_q1-log-hist-1.png){#q1_q2_q1-log-hist-1 width=“85%”}
+
+
+#### Interpretation
+
+The reason for log-transforming the protein levels in biomarker-raw.csv was to correct right skewness and stabilize variance to make sure scaling and trimming worked properly. But log-transforming the protein levels has some downsides. For example, PPase was already symmetric before the log transformation but was pushed into a mild left skew (from -0.15 to -0.55) because log10 over-corrected it. Additionally, Cyclin B1's skewness metric increased slightly (0.43 to 0.59), due to an extreme outlier. Overall, despite these problems, the log-transformation was overall necessary for scaling and trimming.
+
 
 #### Question 2: Outlier analysis
 
-<!-- Q2 results and figures will be added here. -->
+**Methodology**
+
+To understand if specific subjects are outliers, we first removed trim() from the preprocessing code chunk and kept the log-transformation and scaling. We considered an outlier to be any z-value where $|z| > 3$. We then reshaped the data to a long format and tabulated the number of outliers for each individual subject. Then we calculated the summary statistics (mean, median, standard deviation, and maximum) for the outlier counts by group. Lastly, we then generated a boxplot to compare the distributions visually.
+
+
+#### Results
+
+Across all 154 subjects, the median number of proteins that were outliers per subject was 8.5. Subject 154 in the TD group had 157 outlying proteins, and 6 subjects across both groups had more than 100. Only 2 subjects (one from each group) had zero outliers.
+
+```{r}
+#| label: tbl-q2-group-summary
+#| tbl-cap: "Summary of outliers per subject by group."
+group_summary <- read.csv("tables/q2_group_summary.csv", check.names = FALSE)
+knitr::kable(group_summary, digits = 2)
+```
+
+#### Interpretation
+
+There were specific subjects that stood out as outliers. While the median subject had 8.5 outlying proteins, subject 154 in the TD group had 157 extreme values, and 6 subjects across both groups had 100 or more. In total, 77 of the 154 subjects had more than 8.5 outliers, and only 2 subjects (one from each group) had zero. If we look at the median of both groups, they both had exactly 8.5 for ASD and TD. However, looking at the mean, the most extreme cases are concentrated in the TD group. The mean number of outliers was 17.6 for TD compared to 13.25 for ASD, and the TD standard deviation was far larger (29.2 vs. 19.8). Overall, the median subject in both groups has the same number of outliers, but group TD has more extreme outliers.
+
+```{r}
+#| label: tbl-q2-top-outliers
+#| tbl-cap: "Top 10 subjects with the most outliers."
+outliers_subject <- read.csv("tables/q2_outliers_per_subject.csv", check.names = FALSE)
+knitr::kable(head(outliers_subject, 10), digits = 2)
+```
+
+![](graphs/q1_q2_q2-boxplot-1.png){#q1_q2_q2-boxplot-1 width=“85%”}
+
 
 ### Methodological variations
 
