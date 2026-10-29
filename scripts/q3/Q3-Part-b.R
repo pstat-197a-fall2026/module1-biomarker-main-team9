@@ -89,8 +89,9 @@ for (k in c(10, 20)) {
   ))
 }
 
-knitr::kable(comparison, digits = 3)
-knitr::kable(selected_proteins)
+
+print(comparison, n = Inf, width = Inf)
+print(selected_proteins, n = Inf, width = Inf)
 
 # Save the results for the group report
 write.csv(comparison, "results/tables/q3b_comparison.csv", row.names = FALSE)
@@ -99,5 +100,4 @@ write.csv(selected_proteins, "results/tables/q3b_selected_proteins.csv",
 
 
 ## ----------------------------------------------------------------------------
-
 

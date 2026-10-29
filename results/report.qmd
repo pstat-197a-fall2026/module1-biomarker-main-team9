@@ -79,7 +79,6 @@ The statistical testing and random forest approaches each selected ten proteins.
 
 On the held-out testing set, the model achieved an accuracy of 65.63% and a ROC AUC of approximately 0.723. Sensitivity was 50.00%, while specificity was 81.25%.
 
-
 #### Interpretation
 
 The ROC AUC of approximately 0.723 suggests that the model has a moderate ability to distinguish between the two groups. Its specificity (81.25%) was higher than its sensitivity (50.00%), indicating that performance was stronger for identifying observations in the negative class than for detecting observations in the positive class, according to the model's outcome coding and classification threshold.
@@ -88,7 +87,28 @@ Using the intersection of statistical testing and random forest importance provi
 
 #### Question 3(b): Larger protein panels
 
-<!-- Q3(b) results and tables will be added here. -->
+**Methodology**
+
+To examine whether considering more proteins improves prediction, we compared selecting the top ten and top twenty proteins from each method. We used the same 80/20 training/test split as Part (a), and protein selection was performed using only the training data. Proteins were ranked by Benjamini–Yekutieli-adjusted t-test p-values and random forest MeanDecreaseGini importance. When adjusted p-values were tied, raw p-values were used to instead, followed by protein names. The random forest was fitted once so both panel sizes used the same rankings.
+
+For each comparison, only proteins appearing in both lists were retained. A logistic regression model was then fitted using these proteins and the training data. Both models were evaluated on the same testing set, with predicted probabilities of at least 0.5 classified as ASD.
+
+#### Results
+
+Selecting the top ten proteins from each method produced a panel of six proteins: **DERM, Calcineurin, MAPK2, gp130 (soluble), MAPK14, and IgD**. Selecting the top twenty increased the panel to eleven proteins. This larger panel included the original six proteins and added **FSTL1, CXCL16 (soluble), TSP4, Notch 1, and Coagulation Factor IX**.
+
+| Proteins selected per method | Final panel size | Accuracy | Sensitivity | Specificity | ROC AUC |
+|------------|------------|------------|------------|------------|------------|
+| Top 10 | 6 | 68.75% | 56.25% | 81.25% | 0.715 |
+| Top 20 | 11 | 68.75% | 56.25% | 81.25% | 0.684 |
+
+Both models correctly classified 22 of the 32 testing observations. Each identified 9 of 16 ASD observations and 13 of 16 TD observations. Accuracy, sensitivity, and specificity stays unchanged, while ROC AUC decreased from 0.715 to 0.684. These results compare the two panels fitted within Part (b); its top-ten panel and results differ from those reported in Part (a).
+
+#### Interpretation
+
+Increasing the number of candidate proteins did not improve prediction on this testing set. The larger panel used five additional proteins but achieved the same classification accuracy. Its lower ROC AUC also suggests that it was slightly less effective at ranking ASD observations above TD observations by predicted probability. Both models were better at identifying TD observations than ASD observations, as shown by their higher specificity than sensitivity.
+
+The six-protein panel therefore provided a simpler model with comparable accuracy and a slightly higher ROC AUC in this comparison. However, the results come from one split with only 32 testing observations, so they do not show that the smaller panel will always perform better. Also, although protein selection and model fitting used training data only, the shared preprocessing script scaled and clipped the full dataset before splitting.
 
 #### Question 3(c): Fuzzy intersection
 
