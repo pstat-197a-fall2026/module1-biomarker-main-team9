@@ -151,3 +151,11 @@ classification_results
 auc_result
 
 
+# Calculate test-set metrics
+cat("\n--- Q3(a): Test Set Classification Results ---\n")
+print(classification_results)
+
+cat("\n--- Q3(a): ROC AUC ---\n")
+print(auc_result)
+
+

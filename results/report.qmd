@@ -25,6 +25,10 @@ execute:
 # Setup
 library(tidyverse)
 library(knitr)
+
+knitr::opts_knit$set(
+  root.dir = normalizePath("..")
+)
 ```
 
 ## Abstract
@@ -61,7 +65,26 @@ As described in the README, our simplified in-class procedure retains 192 variab
 
 #### Question 3(a): Training-only feature selection
 
-<!-- Q3(a) results will be added here. -->
+#### Question 3(a): Training/Test Split and Protein Selection
+
+**Methodology**
+
+To reduce data leakage during feature selection, the dataset was divided into training and testing sets before starting analysis. Using initial_split() from the rsample package, 80% of the observations were allocated to the training set and 20% to the testing set, with the stratification. A random seed was set to preserve reproducibility. Protein selection was conducted exclusively on the training data using two approaches. First, statistical tests were used to identify the ten proteins with the strongest evidence of differences between the ASD and typically developing (TD) groups, with p-values adjusted using the Benjamini–Yekutieli procedure. Second, a random forest model was used to rank proteins by MeanDecreaseGini importance, and the ten highest-ranked proteins were selected. The intersection of these two sets was used to identify proteins supported by both selection methods.
+
+A logistic regression model was then fitted using the selected proteins and training data. Model performance was evaluated on the held-out testing set.
+
+#### Results
+
+The statistical testing and random forest approaches each selected ten proteins. Their intersection contained [six proteins]{.underline}: **DERM, Calcineurin, MAPK2, FSTL1, IgD, and MAPK14**. These proteins were retained for the logistic regression model because they appeared among the top-ranked proteins from both selection approaches.
+
+On the held-out testing set, the model achieved an accuracy of 65.63% and a ROC AUC of approximately 0.723. Sensitivity was 50.00%, while specificity was 81.25%.
+
+
+#### Interpretation
+
+The ROC AUC of approximately 0.723 suggests that the model has a moderate ability to distinguish between the two groups. Its specificity (81.25%) was higher than its sensitivity (50.00%), indicating that performance was stronger for identifying observations in the negative class than for detecting observations in the positive class, according to the model's outcome coding and classification threshold.
+
+Using the intersection of statistical testing and random forest importance provides a way to prioritize proteins identified by both methods. However, these results alone do not establish that the selected proteins are causal biomarkers or that they will generalize to other populations. Further evaluation and comparison with the in-class analysis are needed to determine how this approach performs relative to the original workflow.
 
 #### Question 3(b): Larger protein panels
 
