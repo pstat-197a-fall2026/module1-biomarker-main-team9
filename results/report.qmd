@@ -78,7 +78,49 @@ A logistic regression model was then fitted using the selected proteins and trai
 The statistical testing and random forest approaches each selected ten proteins. Their intersection contained [six proteins]{.underline}: **DERM, Calcineurin, MAPK2, FSTL1, IgD, and MAPK14**. These proteins were retained for the logistic regression model because they appeared among the top-ranked proteins from both selection approaches.
 
 On the held-out testing set, the model achieved an accuracy of 65.63% and a ROC AUC of approximately 0.723. Sensitivity was 50.00%, while specificity was 81.25%.
+```{r}
+getwd()
+```
 
+
+```{r}
+#| label: q3a-analysis
+#| include: false
+#file.exists("../scripts/q3/Q3-Part-a.R")
+#list.files("../scripts/q3")
+source("../scripts/q3/Q3-Part-a.R")
+
+```
+
+```{r}
+#| label: q3a-results-table
+#| echo: false
+library(dplyr)
+library(knitr)
+
+metrics_table <- bind_rows(
+  classification_results,
+  auc_result
+) %>%
+  select(.metric, .estimate) %>%
+  mutate(
+    Metric = recode(
+      .metric,
+      sensitivity = "Sensitivity",
+      specificity = "Specificity",
+      accuracy = "Accuracy",
+      roc_auc = "ROC AUC"
+    ),
+    Result = round(.estimate, 4)
+  ) %>%
+  select(Metric, Result)
+
+kable(
+  metrics_table,
+  col.names = c("Metric", "Test-Set Result"),
+  caption = "Q3(a): Logistic Regression Performance"
+)
+```
 
 #### Interpretation
 

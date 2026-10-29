@@ -7,7 +7,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
 
 <meta name="author" content="Team 9">
-<meta name="dcterms.date" content="2026-10-28">
+<meta name="dcterms.date" content="2026-10-29">
 
 <title>Biomarkers of ASD</title>
 <style>
@@ -41,7 +41,7 @@ ul.task-list li input[type="checkbox"] {
 <link href="report_files/libs/quarto-html/quarto-syntax-highlighting-64a204ab8560d761af7679ceaba22944.css" rel="stylesheet" id="quarto-text-highlighting-styles">
 <script src="report_files/libs/bootstrap/bootstrap.min.js"></script>
 <link href="report_files/libs/bootstrap/bootstrap-icons.css" rel="stylesheet">
-<link href="report_files/libs/bootstrap/bootstrap-e491f8ff3e9ef7ba1930cda3f1cae37e.min.css" rel="stylesheet" append-hash="true" id="quarto-bootstrap" data-mode="light">
+<link href="report_files/libs/bootstrap/bootstrap-22b4c1abd28e63ff45684f4962f09b6b.min.css" rel="stylesheet" append-hash="true" id="quarto-bootstrap" data-mode="light">
 
 
 </head>
@@ -91,7 +91,7 @@ ul.task-list li input[type="checkbox"] {
     <div>
     <div class="quarto-title-meta-heading">Updated</div>
     <div class="quarto-title-meta-contents">
-      <p class="date">October 28, 2026</p>
+      <p class="date">October 29, 2026</p>
     </div>
   </div>
   
@@ -135,7 +135,58 @@ ul.task-list li input[type="checkbox"] {
 <h3 class="anchored" data-anchor-id="methodological-variations">Methodological variations</h3>
 <section id="question-3a-training-only-feature-selection" class="level4">
 <h4 class="anchored" data-anchor-id="question-3a-training-only-feature-selection">Question 3(a): Training-only feature selection</h4>
-<!-- Q3(a) results will be added here. -->
+</section>
+<section id="question-3a-trainingtest-split-and-protein-selection" class="level4">
+<h4 class="anchored" data-anchor-id="question-3a-trainingtest-split-and-protein-selection">Question 3(a): Training/Test Split and Protein Selection</h4>
+<p><strong>Methodology</strong></p>
+<p>To reduce data leakage during feature selection, the dataset was divided into training and testing sets before starting analysis. Using initial_split() from the rsample package, 80% of the observations were allocated to the training set and 20% to the testing set, with the stratification. A random seed was set to preserve reproducibility. Protein selection was conducted exclusively on the training data using two approaches. First, statistical tests were used to identify the ten proteins with the strongest evidence of differences between the ASD and typically developing (TD) groups, with p-values adjusted using the Benjamini–Yekutieli procedure. Second, a random forest model was used to rank proteins by MeanDecreaseGini importance, and the ten highest-ranked proteins were selected. The intersection of these two sets was used to identify proteins supported by both selection methods.</p>
+<p>A logistic regression model was then fitted using the selected proteins and training data. Model performance was evaluated on the held-out testing set.</p>
+</section>
+<section id="results" class="level4">
+<h4 class="anchored" data-anchor-id="results">Results</h4>
+<p>The statistical testing and random forest approaches each selected ten proteins. Their intersection contained <u>six proteins</u>: <strong>DERM, Calcineurin, MAPK2, FSTL1, IgD, and MAPK14</strong>. These proteins were retained for the logistic regression model because they appeared among the top-ranked proteins from both selection approaches.</p>
+<p>On the held-out testing set, the model achieved an accuracy of 65.63% and a ROC AUC of approximately 0.723. Sensitivity was 50.00%, while specificity was 81.25%.</p>
+<div class="cell">
+<div class="cell-output cell-output-stdout">
+<pre><code>[1] "/Users/abbyco/Documents/197A-fall-2026/module1-biomarker-main-team9/results"</code></pre>
+</div>
+</div>
+<div class="cell">
+<div class="cell-output-display">
+<table class="caption-top table table-sm table-striped small">
+<caption>Q3(a): Logistic Regression Performance</caption>
+<thead>
+<tr class="header">
+<th style="text-align: left;">Metric</th>
+<th style="text-align: right;">Test-Set Result</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td style="text-align: left;">Sensitivity</td>
+<td style="text-align: right;">0.5625</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">Specificity</td>
+<td style="text-align: right;">0.8125</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">Accuracy</td>
+<td style="text-align: right;">0.6875</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">ROC AUC</td>
+<td style="text-align: right;">0.7148</td>
+</tr>
+</tbody>
+</table>
+</div>
+</div>
+</section>
+<section id="interpretation" class="level4">
+<h4 class="anchored" data-anchor-id="interpretation">Interpretation</h4>
+<p>The ROC AUC of approximately 0.723 suggests that the model has a moderate ability to distinguish between the two groups. Its specificity (81.25%) was higher than its sensitivity (50.00%), indicating that performance was stronger for identifying observations in the negative class than for detecting observations in the positive class, according to the model’s outcome coding and classification threshold.</p>
+<p>Using the intersection of statistical testing and random forest importance provides a way to prioritize proteins identified by both methods. However, these results alone do not establish that the selected proteins are causal biomarkers or that they will generalize to other populations. Further evaluation and comparison with the in-class analysis are needed to determine how this approach performs relative to the original workflow.</p>
 </section>
 <section id="question-3b-larger-protein-panels" class="level4">
 <h4 class="anchored" data-anchor-id="question-3b-larger-protein-panels">Question 3(b): Larger protein panels</h4>

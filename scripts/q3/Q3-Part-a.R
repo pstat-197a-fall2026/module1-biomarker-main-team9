@@ -7,7 +7,7 @@ library(tidymodels)
 library(modelr) 
 library(yardstick)
 
-load('data/biomarker-clean.RData') 
+load(here::here("data", "biomarker-clean.RData"))
 
 
 # Split the data into 80% training and 20% testing
