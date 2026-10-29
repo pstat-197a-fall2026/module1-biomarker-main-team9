@@ -256,12 +256,17 @@ run_q4_analysis <- function(project_root = ".", save_tables = FALSE) {
   final_lasso <- select_lasso_panel(data$log_levels, outcome, data$log_levels)
   set.seed(198000)
   final_panel <- select_small_panel(data$log_levels, outcome, data$log_levels)
-  # Inflate the paired fold variance to account approximately for overlapping
-  # training samples; ordinary independent-fold intervals would be too narrow.
+  # Weight subjects equally within each repeat, then average the five repeats.
+  # Equivalently, weight each paired fold difference by its test-fold size.
+  accuracy_difference <- mean(alternative_metrics["Accuracy", ] - baseline_metrics["Accuracy", ])
+  small_accuracy_difference <- mean(small_metrics["Accuracy", ] - baseline_metrics["Accuracy", ])
+  # Center intervals on those same differences. Retain the corrected paired-fold
+  # variance as an approximation for these nearly balanced folds (30-32 subjects).
+  # The 1/4 test/training ratio and overlap correction are approximate, not exact.
   corrected_se <- sqrt((1 / 25 + 1 / 4) * var(fold_differences))
-  difference_interval <- mean(fold_differences) + c(-1, 1) * qt(0.975, df = 24) * corrected_se
+  difference_interval <- accuracy_difference + c(-1, 1) * qt(0.975, df = 24) * corrected_se
   small_corrected_se <- sqrt((1 / 25 + 1 / 4) * var(small_fold_differences))
-  small_difference_interval <- mean(small_fold_differences) +
+  small_difference_interval <- small_accuracy_difference +
     c(-1, 1) * qt(0.975, df = 24) * small_corrected_se
   comparison <- data.frame(
     Model = c("Historical in-class", "Validated in-class procedure", "Validated LASSO procedure",
@@ -284,14 +289,14 @@ run_q4_analysis <- function(project_root = ".", save_tables = FALSE) {
   results <- list(comparison = comparison, selected_proteins = selected_proteins,
                   historical_panel = historical_panel, historical_testing = historical_testing,
                   baseline_sizes = baseline_sizes, alternative_sizes = alternative_sizes,
-                  accuracy_difference = mean(alternative_metrics["Accuracy", ] - baseline_metrics["Accuracy", ]),
+                  accuracy_difference = accuracy_difference,
                   difference_interval = difference_interval,
                   baseline_metrics = baseline_metrics, alternative_metrics = alternative_metrics,
                   final_penalty_ratio = final_lasso$penalty_ratio,
                   final_lasso_proteins = final_lasso$proteins,
                   minimum_deviance_sizes = minimum_deviance_sizes,
                   small_sizes = small_sizes, small_metrics = small_metrics,
-                  small_accuracy_difference = mean(small_metrics["Accuracy", ] - baseline_metrics["Accuracy", ]),
+                  small_accuracy_difference = small_accuracy_difference,
                   small_difference_interval = small_difference_interval,
                   selection_frequency = selection_frequency)
   if (save_tables) {

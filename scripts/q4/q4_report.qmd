@@ -15,15 +15,11 @@ execute:
 ---
 
 ```{r}
-project_root <- if (file.exists("data/biomarker-raw.csv")) "." else "../.."
-source(file.path(project_root, "scripts/q4/q4_analysis.R"))
-q4_results <- suppressMessages(run_q4_analysis(project_root))
-comparison <- q4_results$comparison
+comparison <- read.csv("../../results/tables/q4_model_comparison.csv", check.names = FALSE)
+selected_proteins <- read.csv("../../results/tables/q4_selected_proteins.csv", check.names = FALSE)
 percent <- function(value) sprintf("%.1f%%", 100 * value)
-figures <- plot_q4_results(q4_results)
-# Keep one copy of each report figure in the existing folder for group integration.
-knitr::opts_chunk$set(fig.path = "../../results/graphs/q4_", dev = "png",
-                      dpi = 180, fig.width = 6.5)
+accuracy_difference <- comparison$Accuracy[3] - comparison$Accuracy[2]
+small_accuracy_difference <- comparison$Accuracy[4] - comparison$Accuracy[2]
 ```
 
 ## Objective
@@ -42,14 +38,7 @@ The in-class classifier intersects top-ten lists from adjusted Welch tests and G
 
 **Evaluation.** All three validated procedures use five repeats of the same stratified five-fold outer validation (seed 197104), with preprocessing and selection confined to training data. Each subject receives one held-out prediction per repeat. Accuracy, AUROC, sensitivity, and specificity are averaged across repeats. ASD is positive, with a 0.5 probability threshold. Protein counts summarize the 25 training fits.
 
-Paired accuracy comparisons use the same held-out subjects. Approximate 95% intervals use the [Nadeau--Bengio correction](https://proceedings.neurips.cc/paper_files/paper/1999/file/7d12b66d3df6af8d429c1a357d8b9e1a-Paper.pdf) for overlapping training samples:
-
-$$
-\overline{d}\;\pm\;t_{0.975,\,24}
-\sqrt{\left(\frac{1}{25}+\frac{1}{4}\right)s_d^{\,2}}.
-$$
-
-Here, $\overline{d}$ and $s_d^{\,2}$ describe the 25 paired fold differences (alternative minus baseline); $\frac{1}{4}$ approximates the test-to-training size ratio. Complete-data fits identify final panels, not additional validation estimates.
+Paired accuracy differences give each subject equal weight within a repeat and average the five repeats. Equivalently, test-fold differences are weighted by the numbers of held-out subjects. This matches the accuracy differences in the model comparison table and the repeat-level differences plotted below. The analysis centers its approximate corrected 95% intervals on these same estimates. Interval widths retain the paired-fold variance correction for overlapping training samples, using a test/training ratio of 1/4 as an approximation for the nearly balanced folds. The saved CSV summaries do not include fold-level differences, so corrected intervals are not reported here.
 
 {{< pagebreak >}}
 
@@ -71,37 +60,32 @@ knitr::kable(performance_table, align = c("l", rep("r", 5)), booktabs = TRUE,
 
 The historical classifier selected **DERM, RELT, FSTL1, and IgD** and correctly classified 26 of 31 test subjects, giving 83.9% accuracy and AUROC 0.908. The validated baseline achieved `r percent(comparison$Accuracy[2])` accuracy. These estimates use different evaluation procedures and do not provide a direct comparison of predictive ability.
 
-The small-panel procedure achieved `r percent(comparison$Accuracy[4])` accuracy and AUROC `r sprintf("%.3f", comparison$AUROC[4])`. Its accuracy difference from the validated baseline was **`r sprintf("%+.1f", 100 * q4_results$small_accuracy_difference)` percentage points**, with an approximate corrected 95% interval of `r sprintf("%.1f to %.1f", 100 * q4_results$small_difference_interval[1], 100 * q4_results$small_difference_interval[2])` points. The observed loss was within the prespecified five-point margin, but the interval also allows substantially larger losses.
+The small-panel procedure achieved `r percent(comparison$Accuracy[4])` accuracy and AUROC `r sprintf("%.3f", comparison$AUROC[4])`. Its accuracy difference from the validated baseline was **`r sprintf("%+.1f", 100 * small_accuracy_difference)` percentage points**. The observed loss was within the five-point descriptive margin, but this does not establish equivalent accuracy or non-inferiority.
 
 ### Panel size and selected proteins
 
-The small-panel procedure used `r min(q4_results$small_sizes)`-`r max(q4_results$small_sizes)` proteins across outer fits (mean `r sprintf("%.2f", mean(q4_results$small_sizes))`). The complete-data fit selected **one protein: DERM (dermatopontin)**. Cross-validation evaluates the selection procedure with varying panels; it does not independently validate the fixed DERM panel.
+The small-panel procedure used `r comparison$Min_proteins[4]`-`r comparison$Max_proteins[4]` proteins across outer fits (mean `r sprintf("%.2f", comparison$Mean_proteins[4])`). The complete-data fit selected **one protein: DERM (dermatopontin)**. Cross-validation evaluates the selection procedure with varying panels; it does not independently validate the fixed DERM panel.
 
 ```{r}
-#| label: fig-selection
-#| fig-height: 2.8
-#| fig-cap: "Protein selection frequencies for the small-panel procedure. All five proteins selected at least once are shown; the denominator is 25 outer training fits."
-figures$selection
+knitr::kable(selected_proteins, digits = 4, booktabs = TRUE,
+             caption = "Final small-panel protein and selection frequency across 25 outer fits.")
 ```
+
+![Protein selection frequencies for the small-panel procedure. All five proteins selected at least once are shown; the denominator is 25 outer training fits.](../../results/graphs/q4_fig-selection-1.png){#fig-selection width="100%"}
 
 @fig-selection shows that DERM was selected most often, in 68% of training fits, but was not selected consistently across all partitions. These frequencies describe stability, rather than statistical significance or biological importance.
 
 {{< pagebreak >}}
 
-```{r}
-#| label: fig-difference
-#| fig-height: 2.6
-#| fig-cap: "Paired accuracy differences from five validation repeats. Each point compares predictions for the same 154 subjects within a repeat. Repeats reuse subjects and are not independent experiments."
-figures$difference
-```
+![Paired accuracy differences from five validation repeats. Each point compares predictions for the same 154 subjects within a repeat. Repeats reuse subjects and are not independent experiments.](../../results/graphs/q4_fig-difference-1.png){#fig-difference width="100%"}
 
 @fig-difference shows variation in the small-panel comparison across partitions. The zero line represents equal observed accuracy; the dashed line marks a five-point loss. These repeat-level differences are descriptive, not five independent estimates of sampling uncertainty.
 
-LASSO achieved `r percent(comparison$Accuracy[3])` accuracy and AUROC `r sprintf("%.3f", comparison$AUROC[3])`. The one-standard-error rule reduced average panel size from `r sprintf("%.2f", mean(q4_results$minimum_deviance_sizes))` proteins at minimum deviance to `r sprintf("%.2f", mean(q4_results$alternative_sizes))`, but the complete-data fit still selected `r length(q4_results$final_lasso_proteins)` proteins. Its accuracy gain over the validated baseline was `r sprintf("%.1f", 100 * q4_results$accuracy_difference)` percentage points, with an approximate paired interval of `r sprintf("%.1f to %.1f", 100 * q4_results$difference_interval[1], 100 * q4_results$difference_interval[2])` points. This does not establish improved accuracy.
+LASSO achieved `r percent(comparison$Accuracy[3])` accuracy and AUROC `r sprintf("%.3f", comparison$AUROC[3])`, using an average of `r sprintf("%.2f", comparison$Mean_proteins[3])` proteins (range `r comparison$Min_proteins[3]`-`r comparison$Max_proteins[3]`). Its observed accuracy gain over the validated baseline was `r sprintf("%.1f", 100 * accuracy_difference)` percentage points. This does not establish improved population accuracy.
 
 ## Discussion
 
-The small-panel procedure uses fewer proteins than the validated baseline on average, and its final panel contains only DERM. The observed accuracy loss is within the five-point descriptive margin. However, sensitivity and AUROC are also lower, and the accuracy interval allows losses larger than five points. The result supports further study of a simpler panel, rather than a conclusion that population accuracy is comparable.
+The small-panel procedure uses fewer proteins than the validated baseline on average, and its final panel contains only DERM. The observed accuracy loss is within the five-point descriptive margin. However, sensitivity and AUROC are also lower, and the observed accuracy difference alone does not establish comparable population performance. The result supports further study of a simpler panel, rather than a conclusion that population accuracy is comparable.
 
 The historical evaluation is vulnerable to optimism because test subjects influenced preprocessing and protein selection. Different training sizes, test subjects, and random variation also contribute to its difference from the validated baseline. That difference cannot be attributed entirely to leakage.
 
@@ -109,4 +93,4 @@ There are only 154 subjects and many candidate proteins. Repeated validation reu
 
 ## Conclusion
 
-The small-panel procedure produced a one-protein DERM candidate with observed accuracy within the five-point descriptive margin. The uncertainty is too wide to establish comparable population accuracy. LASSO's larger panel also lacks convincing evidence of improved accuracy. Both findings remain exploratory.
+The small-panel procedure produced a one-protein DERM candidate with observed accuracy within the five-point descriptive margin. The observed comparison does not establish comparable population accuracy. LASSO's larger panel also lacks convincing evidence of improved accuracy. Both findings remain exploratory.

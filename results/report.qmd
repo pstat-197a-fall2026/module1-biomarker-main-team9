@@ -84,7 +84,7 @@ percent <- function(x) sprintf("%.1f%%", 100 * x)
 
 We asked whether a different classifier could improve prediction or use fewer proteins. The validated in-class baseline combines adjusted Welch t-tests and random forest selection with logistic regression. We compared it with LASSO, which shrinks coefficients and selects proteins, and logistic regression using a small panel of one to three highly ranked proteins. Inner five-fold cross-validation chooses the LASSO penalty and small-panel size, favoring simpler models when prediction errors are similar.
 
-All three procedures use the same five repeats of stratified five-fold cross-validation, with preprocessing and selection performed within training folds. Accuracy, AUROC, sensitivity, and specificity are averaged over the repeats; protein counts summarize the 25 outer training fits. ASD is the positive class, with predicted probabilities above 0.5 classified as ASD.
+All three procedures use the same five repeats of stratified five-fold cross-validation, with preprocessing and selection performed within training folds. Accuracy, AUROC, sensitivity, and specificity are averaged over the repeats; protein counts summarize the 25 outer training fits. Paired accuracy differences give each subject equal weight within a repeat, then average the five repeats, matching the table below. The corrected analysis centers its approximate confidence intervals on these same differences; updated numerical intervals are not available in the saved summaries and are not reported here. ASD is the positive class, with predicted probabilities above 0.5 classified as ASD.
 
 ```{r}
 #| label: tbl-q4-comparison
@@ -104,7 +104,7 @@ knitr::kable(performance, align = c("l", rep("r", 5)))
 
 The historical in-class model used DERM, RELT, FSTL1, and IgD and achieved `r percent(comparison$Accuracy[1])` accuracy. Because preprocessing and protein selection used all subjects before its 80/20 split, this result is a separate reference and is not directly comparable with the cross-validated estimates.
 
-In @tbl-q4-comparison, LASSO had the highest observed validated accuracy (`r percent(comparison$Accuracy[3])`) and AUROC (`r sprintf("%.3f", comparison$AUROC[3])`), using an average of `r sprintf("%.2f", comparison$Mean_proteins[3])` proteins. Its accuracy was `r sprintf("%.1f", 100 * (comparison$Accuracy[3] - comparison$Accuracy[2]))` percentage points above the validated baseline (`r percent(comparison$Accuracy[2])`). The small-panel procedure achieved `r percent(comparison$Accuracy[4])` accuracy using just `r comparison$Min_proteins[4]` to `r comparison$Max_proteins[4]` proteins per fit (mean `r sprintf("%.2f", comparison$Mean_proteins[4])`). Its `r sprintf("%.1f", 100 * (comparison$Accuracy[2] - comparison$Accuracy[4]))`-point loss was within the prespecified five-point descriptive margin, although its AUROC and sensitivity were also lower.
+In @tbl-q4-comparison, LASSO had the highest observed validated accuracy (`r percent(comparison$Accuracy[3])`) and AUROC (`r sprintf("%.3f", comparison$AUROC[3])`), using an average of `r sprintf("%.2f", comparison$Mean_proteins[3])` proteins. Its accuracy was `r sprintf("%.1f", 100 * (comparison$Accuracy[3] - comparison$Accuracy[2]))` percentage points above the validated baseline (`r percent(comparison$Accuracy[2])`). The small-panel procedure achieved `r percent(comparison$Accuracy[4])` accuracy using just `r comparison$Min_proteins[4]` to `r comparison$Max_proteins[4]` proteins per fit (mean `r sprintf("%.2f", comparison$Mean_proteins[4])`). Its `r sprintf("%.1f", 100 * (comparison$Accuracy[2] - comparison$Accuracy[4]))`-point loss was within an exploratory five-percentage-point descriptive margin, although its AUROC and sensitivity were also lower. This margin was not a formal equivalence or non-inferiority test.
 
 ```{r}
 #| label: tbl-q4-selected
@@ -123,7 +123,7 @@ The final small-panel fit selected DERM (dermatopontin; @tbl-q4-selected). The n
 
 ![Protein-selection stability for the small-panel procedure. Frequencies use 25 outer training fits; all five proteins selected at least once are shown.](graphs/q4_fig-selection-1.png){#fig-q4-selection width="85%"}
 
-![Paired accuracy differences for the small panel versus the validated baseline across five repeats. The dashed line marks a five-percentage-point loss; zero indicates equal accuracy. Subjects are reused across repeats.](graphs/q4_fig-difference-1.png){#fig-q4-difference width="85%"}
+![Paired accuracy differences for the small panel versus the validated baseline across five repeats. The dashed line marks the exploratory five-percentage-point loss margin; zero indicates equal accuracy. Subjects are reused across repeats.](graphs/q4_fig-difference-1.png){#fig-q4-difference width="85%"}
 
 The accuracy differences in @fig-q4-difference vary across repeats. LASSO's observed gain does not establish better population performance, and the small panel's reduced size does not establish equivalent accuracy. These comparisons remain exploratory because they use many candidate proteins and repeatedly evaluate the same 154 subjects. The fixed DERM panel has not been independently validated.
 

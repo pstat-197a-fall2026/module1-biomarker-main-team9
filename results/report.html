@@ -151,7 +151,7 @@ ul.task-list li input[type="checkbox"] {
 <section id="question-4-alternative-classifier" class="level4">
 <h4 class="anchored" data-anchor-id="question-4-alternative-classifier">Question 4: Alternative classifier</h4>
 <p>We asked whether a different classifier could improve prediction or use fewer proteins. The validated in-class baseline combines adjusted Welch t-tests and random forest selection with logistic regression. We compared it with LASSO, which shrinks coefficients and selects proteins, and logistic regression using a small panel of one to three highly ranked proteins. Inner five-fold cross-validation chooses the LASSO penalty and small-panel size, favoring simpler models when prediction errors are similar.</p>
-<p>All three procedures use the same five repeats of stratified five-fold cross-validation, with preprocessing and selection performed within training folds. Accuracy, AUROC, sensitivity, and specificity are averaged over the repeats; protein counts summarize the 25 outer training fits. ASD is the positive class, with predicted probabilities above 0.5 classified as ASD.</p>
+<p>All three procedures use the same five repeats of stratified five-fold cross-validation, with preprocessing and selection performed within training folds. Accuracy, AUROC, sensitivity, and specificity are averaged over the repeats; protein counts summarize the 25 outer training fits. Paired accuracy differences give each subject equal weight within a repeat, then average the five repeats, matching the table below. The corrected analysis centers its approximate confidence intervals on these same differences; updated numerical intervals are not available in the saved summaries and are not reported here. ASD is the positive class, with predicted probabilities above 0.5 classified as ASD.</p>
 <div class="cell">
 <div id="tbl-q4-comparison" class="cell quarto-float quarto-figure quarto-figure-center anchored">
 <figure class="quarto-float quarto-float-tbl figure">
@@ -220,7 +220,7 @@ Table&nbsp;1: Q4 classification performance. Validated metrics average five repe
 </div>
 </div>
 <p>The historical in-class model used DERM, RELT, FSTL1, and IgD and achieved 83.9% accuracy. Because preprocessing and protein selection used all subjects before its 80/20 split, this result is a separate reference and is not directly comparable with the cross-validated estimates.</p>
-<p>In <a href="#tbl-q4-comparison" class="quarto-xref">Table&nbsp;1</a>, LASSO had the highest observed validated accuracy (71.6%) and AUROC (0.793), using an average of 16.36 proteins. Its accuracy was 3.2 percentage points above the validated baseline (68.3%). The small-panel procedure achieved 64.2% accuracy using just 1 to 2 proteins per fit (mean 1.12). Its 4.2-point loss was within the prespecified five-point descriptive margin, although its AUROC and sensitivity were also lower.</p>
+<p>In <a href="#tbl-q4-comparison" class="quarto-xref">Table&nbsp;1</a>, LASSO had the highest observed validated accuracy (71.6%) and AUROC (0.793), using an average of 16.36 proteins. Its accuracy was 3.2 percentage points above the validated baseline (68.3%). The small-panel procedure achieved 64.2% accuracy using just 1 to 2 proteins per fit (mean 1.12). Its 4.2-point loss was within an exploratory five-percentage-point descriptive margin, although its AUROC and sensitivity were also lower. This margin was not a formal equivalence or non-inferiority test.</p>
 <div class="cell">
 <div id="tbl-q4-selected" class="cell quarto-float quarto-figure quarto-figure-center anchored">
 <figure class="quarto-float quarto-float-tbl figure">
@@ -269,7 +269,7 @@ Figure&nbsp;1: Protein-selection stability for the small-panel procedure. Freque
 <img src="graphs/q4_fig-difference-1.png" class="img-fluid figure-img" style="width:85.0%">
 </div>
 <figcaption class="quarto-float-caption-bottom quarto-float-caption quarto-float-fig" id="fig-q4-difference-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
-Figure&nbsp;2: Paired accuracy differences for the small panel versus the validated baseline across five repeats. The dashed line marks a five-percentage-point loss; zero indicates equal accuracy. Subjects are reused across repeats.
+Figure&nbsp;2: Paired accuracy differences for the small panel versus the validated baseline across five repeats. The dashed line marks the exploratory five-percentage-point loss margin; zero indicates equal accuracy. Subjects are reused across repeats.
 </figcaption>
 </figure>
 </div>
