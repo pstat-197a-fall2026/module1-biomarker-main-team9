@@ -92,7 +92,69 @@ Using the intersection of statistical testing and random forest importance provi
 
 #### Question 3(c): Fuzzy intersection
 
-<!-- Q3(c) results and tables will be added here. -->
+```{r}
+# Read saved Q3(c) summaries from scripts/q3/Q3-Part-C.R
+q3c_comparison <- read.csv("results/tables/q3c_comparison.csv", check.names = FALSE)
+q3c_selected <- read.csv("results/tables/q3c_selected_proteins.csv", check.names = FALSE)
+percent <- function(x) sprintf("%.1f%%", 100 * x)
+```
+
+**Methodology**
+
+A hard intersection keeps a protein only if it is in the top ten of *both* the t-test and random forest rankings, so a protein ranked 11th by one method is dropped no matter how strongly the other method ranks it. To soften this rule, we used the same 80/20 training/test split as Q3(a) and kept the full ranking of all proteins from each method on the training data. Each rank $r$ was converted to a membership score between 0 and 1,
+
+$$
+\mu(r) = \max\left(0,\ 1 - \frac{r - 1}{K}\right), \qquad K = 30,
+$$
+
+so the top-ranked protein scores 1 and scores fall linearly to 0 after rank 30. We combined the two scores in two ways:
+
+-   **Fuzzy min**, $\min(\mu_{t}, \mu_{RF})$, the standard fuzzy intersection: a protein is only as strong as its weaker ranking.
+-   **Fuzzy geometric mean**, $\sqrt{\mu_{t} \cdot \mu_{RF}}$, which lets a strong ranking from one method partly make up for a weaker ranking from the other.
+
+Proteins with a combined score of at least 0.5 formed the panel. For the min rule, this means both ranks must be 16 or better. For the geometric mean, it is equivalent to requiring a product of scores of at least 0.25. Each panel was used to fit a logistic regression on the training set and was evaluated on the held-out test set, with ASD as the positive class.
+
+**Results**
+
+```{r}
+#| label: tbl-q3c-comparison
+#| tbl-cap: "Q3(c) test-set performance of each intersection rule (training-only selection, 80/20 split)."
+knitr::kable(
+  data.frame(
+    Rule = q3c_comparison$rule,
+    Proteins = q3c_comparison$panel_size,
+    Accuracy = percent(q3c_comparison$accuracy),
+    Sensitivity = percent(q3c_comparison$sensitivity),
+    Specificity = percent(q3c_comparison$specificity),
+    AUROC = sprintf("%.3f", q3c_comparison$AUROC)
+  ),
+  align = c("l", rep("r", 5))
+)
+```
+
+```{r}
+#| label: tbl-q3c-proteins
+#| tbl-cap: "Proteins selected under each intersection rule."
+q3c_selected %>%
+  group_by(rule = factor(rule, levels = unique(rule))) %>%
+  summarize(proteins = paste(protein, collapse = ", ")) %>%
+  rename(Rule = rule, Proteins = proteins) %>%
+  knitr::kable()
+```
+
+The hard intersection selected `r q3c_comparison$panel_size[1]` proteins (@tbl-q3c-proteins). The fuzzy min rule kept the same six and added only TSP4, which ranked 15th by t-test and 10th by random forest. Its test-set performance was identical to the hard intersection: `r percent(q3c_comparison$accuracy[2])` accuracy and an AUROC of `r sprintf("%.3f", q3c_comparison$AUROC[2])` (@tbl-q3c-comparison).
+
+The geometric mean rule was more permissive and selected `r q3c_comparison$panel_size[3]` proteins. Besides TSP4, it added Notch 1, FSTL1, and soluble CXCL16. FSTL1 and CXCL16 ranked 4th and 5th by t-test but only 19th and 20th by random forest (@fig-q3c-membership), so they passed only because the geometric mean let one strong ranking make up for a weak one. This larger panel performed slightly worse: accuracy fell to `r percent(q3c_comparison$accuracy[3])`, specificity fell from `r percent(q3c_comparison$specificity[1])` to `r percent(q3c_comparison$specificity[3])`, and AUROC fell to `r sprintf("%.3f", q3c_comparison$AUROC[3])`. Sensitivity was unchanged at `r percent(q3c_comparison$sensitivity[3])` (@fig-q3c-metrics).
+
+![Membership scores from each selection method for every protein selected by at least one rule, ordered by geometric mean. The dashed line marks the 0.5 threshold.](graphs/q3c_fig-membership.png){#fig-q3c-membership width="85%"}
+
+![Test-set performance by intersection rule.](graphs/q3c_fig-metrics.png){#fig-q3c-metrics width="85%"}
+
+**Interpretation**
+
+Switching to a fuzzy intersection changed the panel more than it changed performance. The six proteins in the hard intersection (DERM, Calcineurin, MAPK2, gp130, MAPK14, and IgD) scored highly under both methods and were kept by every rule, so this core panel is not sensitive to how strictly the rankings are combined. Loosening the rule added proteins that only one method favored, and those additions did not improve prediction. Under the geometric mean rule, they slightly reduced specificity and AUROC. This matches Q3(b): adding proteins beyond the core panel brings in noise rather than useful signal.
+
+These differences should not be overinterpreted. The test set contains only 32 subjects, so one misclassified subject changes accuracy by about 3.1 percentage points; the drop from `r percent(q3c_comparison$accuracy[1])` to `r percent(q3c_comparison$accuracy[3])` is a single subject. The results also come from one train/test split, and the depth $K = 30$ and the 0.5 threshold were chosen by us rather than tuned. All three rules fall well below the 83.9% accuracy of the in-class analysis, because that analysis selected proteins using all subjects (see Q3(a)), not because of the intersection rule.
 
 ### Improved classifier
 
@@ -100,8 +162,8 @@ Using the intersection of statistical testing and random forest importance provi
 
 ```{r}
 # Read saved summaries; rendering does not rerun the models.
-comparison <- read.csv("tables/q4_model_comparison.csv", check.names = FALSE)
-selected <- read.csv("tables/q4_selected_proteins.csv", check.names = FALSE)
+comparison <- read.csv("results/tables/q4_model_comparison.csv", check.names = FALSE)
+selected <- read.csv("results/tables/q4_selected_proteins.csv", check.names = FALSE)
 percent <- function(x) sprintf("%.1f%%", 100 * x)
 ```
 
