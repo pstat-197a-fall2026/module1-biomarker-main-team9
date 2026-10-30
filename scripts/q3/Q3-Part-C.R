@@ -9,13 +9,10 @@ library(yardstick)
 
 # Data loading ----------------------------------------------------------------
 
-load("data/biomarker-clean.RData")
-
-set.seed(101422)
-biomarker_split <- initial_split(biomarker_clean, prop = 0.8, strata = group)
-train_data <- training(biomarker_split)
-test_data <- testing(biomarker_split)
-
+source("scripts/q3/preprocess-split.R", local = TRUE)
+q3_partition <- prepare_q3_split()
+train_data <- q3_partition$train
+test_data <- q3_partition$test
 
 # 1. Keep the full ranking from each method -----------------------------------
 

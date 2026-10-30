@@ -31,11 +31,61 @@ knitr::opts_knit$set(
 )
 ```
 
+```{r}
+#| label: refresh-q3-results
+#| include: false
+# This chunk runs from the project root set in the setup chunk above.
+dir.create("results/tables", recursive = TRUE, showWarnings = FALSE)
+dir.create("results/graphs", recursive = TRUE, showWarnings = FALSE)
+q3_jobs <- list(
+  list(script = "scripts/q3/Q3-Part-a.R",
+       outputs = c("results/tables/q3a_metrics.csv",
+                   "results/tables/q3a_selected_proteins.csv")),
+  list(script = "scripts/q3/Q3-Part-b.R",
+       outputs = c("results/tables/q3b_comparison.csv",
+                   "results/tables/q3b_selected_proteins.csv")),
+  list(script = "scripts/q3/Q3-Part-C.R",
+       outputs = c("results/tables/q3c_comparison.csv",
+                   "results/tables/q3c_selected_proteins.csv",
+                   "results/graphs/q3c_fig-membership.png",
+                   "results/graphs/q3c_fig-metrics.png"))
+)
+for (job in q3_jobs) {
+  inputs <- c(job$script, "scripts/q3/preprocess-split.R",
+              "data/biomarker-raw.csv")
+  needs_refresh <- !all(file.exists(job$outputs))
+  if (!needs_refresh) {
+    needs_refresh <- max(file.info(inputs)$mtime) >
+      min(file.info(job$outputs)$mtime)
+  }
+  if (needs_refresh) {
+    source(job$script, local = new.env(parent = globalenv()))
+  }
+}
+# Load summaries before the abstract so its numerical claims use current results.
+q3a_metrics <- read.csv("results/tables/q3a_metrics.csv")
+q3b_comparison <- read.csv("results/tables/q3b_comparison.csv")
+q3c_comparison <- read.csv("results/tables/q3c_comparison.csv")
+percent <- function(x) sprintf("%.1f%%", 100 * x)
+metric_change <- function(new, baseline, percentage = FALSE) {
+  difference <- new - baseline
+  if (abs(difference) < 1e-10) return("was unchanged")
+  amount <- if (percentage) sprintf("%.1f percentage points", 100 * abs(difference)) else
+    sprintf("%.3f", abs(difference))
+  paste(if (difference > 0) "increased by" else "decreased by", amount)
+}
+q3b_small <- q3b_comparison[q3b_comparison$top_k == 10, ]
+q3b_large <- q3b_comparison[q3b_comparison$top_k == 20, ]
+q3c_hard <- q3c_comparison[q3c_comparison$rule == "Hard (top 10)", ]
+q3c_min <- q3c_comparison[q3c_comparison$rule == "Fuzzy min", ]
+q3c_geo <- q3c_comparison[q3c_comparison$rule == "Fuzzy geometric mean", ]
+```
+
 ## Abstract
 
-We use serum protein measurements to explore how analysis choices affect the search for potential biomarkers of autism spectrum disorder (ASD). Our four questions examine log transformation, outliers, changes to protein selection, and alternative classifiers. We consider whether selecting proteins using training data alone, choosing larger panels, or combining rankings through a fuzzy intersection changes the analysis. In the alternative-classifier comparison, LASSO had the highest observed cross-validated accuracy, while a smaller panel reduced the number of proteins at some cost to prediction. The project examines both predictive performance and the stability of the selected panels.
+We use serum protein measurements from 154 boys to explore how analysis choices affect the search for potential biomarkers of autism spectrum disorder (ASD). Log transformation reduced right skewness for several sampled proteins, although its effect varied across proteins. Outlying values were concentrated in particular subjects; TD subjects had a higher mean outlier count, while both groups had the same median. With preprocessing and protein selection restricted to training subjects, the Q3(a) classifier achieved `r percent(q3a_metrics$.estimate[q3a_metrics$.metric == "accuracy"])` held-out accuracy. Selecting twenty rather than ten candidates per method changed the panel from `r q3b_small$panel_size` to `r q3b_large$panel_size` proteins; accuracy `r metric_change(q3b_large$accuracy, q3b_small$accuracy, TRUE)`. Relative to a hard intersection, accuracy `r metric_change(q3c_min$accuracy, q3c_hard$accuracy, TRUE)` under fuzzy min and `r metric_change(q3c_geo$accuracy, q3c_hard$accuracy, TRUE)` under the geometric mean. In Q4, LASSO had the highest observed cross-validated accuracy, while a smaller panel reduced the number of proteins at some cost to prediction. These exploratory comparisons do not establish clinical validity.
 
-<!-- Incorporate the team's main Q1-Q3 findings into this paragraph when available. -->
+
 
 ## Dataset
 
@@ -64,14 +114,14 @@ To understand the effect of log-transforming the protein levels in biomarker-raw
 
 For the raw dataset, using Pearson's second coefficient of skewness, where values greater than 0.5 indicate right skew and values less than -0.5 indicate left skew, three of the six proteins we sampled showed strong right skewness (Carbonic anhydrase III = 0.96, N-terminal pro-BNP = 0.94, BCAR3 = 0.84), while Cyclin B1 (0.43) fell just below the threshold, and PPase (-0.15) and Bone proteoglycan II (0.14) were essentially symmetric. The raw standard deviations ranged from 550 to 12,009. After log10 transformation, the three strongly-skewed proteins dropped greatly (N-terminal pro-BNP to 0.38, BCAR3 to 0.46), and the standard deviations compressed from 0.07 to 0.23 across all six proteins.
 
-![](graphs/q1_q2_q1-raw-hist-1.png){#q1_q2_q1-raw-hist-1 width=“85%”}
+![](graphs/q1_q2_q1-raw-hist-1.png){#q1_q2_q1-raw-hist-1 width="85%"}
 
-![](graphs/q1_q2_q1-log-hist-1.png){#q1_q2_q1-log-hist-1 width=“85%”}
+![](graphs/q1_q2_q1-log-hist-1.png){#q1_q2_q1-log-hist-1 width="85%"}
 
 
 #### Interpretation
 
-The reason for log-transforming the protein levels in biomarker-raw.csv was to correct right skewness and stabilize variance to make sure scaling and trimming worked properly. But log-transforming the protein levels has some downsides. For example, PPase was already symmetric before the log transformation but was pushed into a mild left skew (from -0.15 to -0.55) because log10 over-corrected it. Additionally, Cyclin B1's skewness metric increased slightly (0.43 to 0.59), due to an extreme outlier. Overall, despite these problems, the log-transformation was overall necessary for scaling and trimming.
+Log transformation compresses large measurements and can reduce right skewness, making relative differences easier to examine. Its effects varied across the six sampled proteins. PPase shifted from approximately symmetric to mildly left-skewed (coefficient -0.15 to -0.55), while Cyclin B1's coefficient increased from 0.43 to 0.59. Carbonic anhydrase III remained right-skewed after logging (0.78). Thus, logging improved symmetry for some proteins but did not make every distribution symmetric. These descriptive results do not establish variance stabilization, and neither scaling nor clipping requires a log transformation.
 
 
 #### Question 2: Outlier analysis
@@ -88,7 +138,7 @@ Across all 154 subjects, the median number of proteins that were outliers per su
 ```{r}
 #| label: tbl-q2-group-summary
 #| tbl-cap: "Summary of outliers per subject by group."
-group_summary <- read.csv("tables/q2_group_summary.csv", check.names = FALSE)
+group_summary <- read.csv("results/tables/q2_group_summary.csv", check.names = FALSE)
 knitr::kable(group_summary, digits = 2)
 ```
 
@@ -99,38 +149,32 @@ There were specific subjects that stood out as outliers. While the median subjec
 ```{r}
 #| label: tbl-q2-top-outliers
 #| tbl-cap: "Top 10 subjects with the most outliers."
-outliers_subject <- read.csv("tables/q2_outliers_per_subject.csv", check.names = FALSE)
+outliers_subject <- read.csv("results/tables/q2_outliers_per_subject.csv", check.names = FALSE)
 knitr::kable(head(outliers_subject, 10), digits = 2)
 ```
 
-![](graphs/q1_q2_q2-boxplot-1.png){#q1_q2_q2-boxplot-1 width=“85%”}
+![](graphs/q1_q2_q2-boxplot-1.png){#q1_q2_q2-boxplot-1 width="85%"}
 
 
 ### Methodological variations
-
-#### Question 3(a): Training-only feature selection
 
 #### Question 3(a): Training/Test Split and Protein Selection
 
 **Methodology**
 
-To reduce data leakage during feature selection, the dataset was divided into training and testing sets before starting analysis. Using initial_split() from the rsample package, 80% of the observations were allocated to the training set and 20% to the testing set, with the stratification. A random seed was set to preserve reproducibility. Protein selection was conducted exclusively on the training data using two approaches. First, statistical tests were used to identify the ten proteins with the strongest evidence of differences between the ASD and typically developing (TD) groups, with p-values adjusted using the Benjamini–Yekutieli procedure. Second, a random forest model was used to rank proteins by MeanDecreaseGini importance, and the ten highest-ranked proteins were selected. The intersection of these two sets was used to identify proteins supported by both selection methods.
+To reduce data leakage during feature selection, the dataset was divided into training and testing sets before starting analysis. Using initial_split() from the rsample package, 80% of the observations were allocated to the training set and 20% to the testing set, with stratification by group. Preprocessing means and standard deviations were estimated on training subjects only; both partitions were then transformed and clipped to [-3, 3] using those parameters. A random seed was set to preserve reproducibility. Protein selection was conducted exclusively on the training data using two approaches. First, statistical tests were used to identify the ten proteins with the strongest evidence of differences between the ASD and typically developing (TD) groups, with p-values adjusted using the Benjamini–Yekutieli procedure. Second, a random forest model was used to rank proteins by MeanDecreaseGini importance, and the ten highest-ranked proteins were selected. The intersection of these two sets was used to identify proteins supported by both selection methods.
 
 A logistic regression model was then fitted using the selected proteins and training data. Model performance was evaluated on the held-out testing set.
 
 #### Results
 
-The statistical testing and random forest approaches each selected ten proteins. Their intersection contained [six proteins]{.underline}: **DERM, Calcineurin, MAPK2, FSTL1, IgD, and MAPK14**. These proteins were retained for the logistic regression model because they appeared among the top-ranked proteins from both selection approaches.
-
-On the held-out testing set, the model achieved an accuracy of 65.63% and a ROC AUC of approximately 0.723. Sensitivity was 50.00%, while specificity was 81.25%.
-
+The selected panel and test-set metrics below are regenerated by `scripts/analysis-main.R` using training-only preprocessing and selection.
 
 ```{r}
 #| label: q3a-analysis
 #| include: false
-#file.exists("../scripts/q3/Q3-Part-a.R")
-#list.files("../scripts/q3")
-source("../scripts/q3/Q3-Part-a.R")
+q3a_metrics <- read.csv("results/tables/q3a_metrics.csv")
+q3a_selected <- read.csv("results/tables/q3a_selected_proteins.csv")
 
 ```
 
@@ -141,8 +185,7 @@ library(dplyr)
 library(knitr)
 
 metrics_table <- bind_rows(
-  classification_results,
-  auc_result
+  q3a_metrics
 ) %>%
   select(.metric, .estimate) %>%
   mutate(
@@ -166,34 +209,30 @@ kable(
 
 #### Interpretation
 
-The ROC AUC of approximately 0.723 suggests that the model has a moderate ability to distinguish between the two groups. Its specificity (81.25%) was higher than its sensitivity (50.00%), indicating that performance was stronger for identifying observations in the negative class than for detecting observations in the positive class, according to the model's outcome coding and classification threshold.
-
-Using the intersection of statistical testing and random forest importance provides a way to prioritize proteins identified by both methods. However, these results alone do not establish that the selected proteins are causal biomarkers or that they will generalize to other populations. Further evaluation and comparison with the in-class analysis are needed to determine how this approach performs relative to the original workflow.
+The panel contained `r nrow(q3a_selected)` proteins: `r paste(q3a_selected$protein, collapse = ", ")`. These results evaluate one held-out split and do not establish causal biomarkers or generalization to other populations. The historical in-class estimate in Q4 uses full-data selection and a different split, so it is a separate reference.
 
 #### Question 3(b): Larger protein panels
 
 **Methodology**
 
-To examine whether considering more proteins improves prediction, we compared selecting the top ten and top twenty proteins from each method. We used the same 80/20 training/test split as Part (a), and protein selection was performed using only the training data. Proteins were ranked by Benjamini–Yekutieli-adjusted t-test p-values and random forest MeanDecreaseGini importance. When adjusted p-values were tied, raw p-values were used to instead, followed by protein names. The random forest was fitted once so both panel sizes used the same rankings.
+To examine whether considering more proteins improves prediction, we compared selecting the top ten and top twenty proteins from each method. We used the same 80/20 training/test split as Part (a), and protein selection was performed using only the training data. Proteins were ranked by Benjamini–Yekutieli-adjusted t-test p-values and random forest MeanDecreaseGini importance. Adjusted-p-value ties were broken by raw p-values, followed by protein names. The random forest was fitted once so both panel sizes used the same rankings.
 
 For each comparison, only proteins appearing in both lists were retained. A logistic regression model was then fitted using these proteins and the training data. Both models were evaluated on the same testing set, with predicted probabilities of at least 0.5 classified as ASD.
 
 #### Results
 
-Selecting the top ten proteins from each method produced a panel of six proteins: **DERM, Calcineurin, MAPK2, gp130 (soluble), MAPK14, and IgD**. Selecting the top twenty increased the panel to eleven proteins. This larger panel included the original six proteins and added **FSTL1, CXCL16 (soluble), TSP4, Notch 1, and Coagulation Factor IX**.
-
-| Proteins selected per method | Final panel size | Accuracy | Sensitivity | Specificity | ROC AUC |
-|------------|------------|------------|------------|------------|------------|
-| Top 10 | 6 | 68.75% | 56.25% | 81.25% | 0.715 |
-| Top 20 | 11 | 68.75% | 56.25% | 81.25% | 0.684 |
-
-Both models correctly classified 22 of the 32 testing observations. Each identified 9 of 16 ASD observations and 13 of 16 TD observations. Accuracy, sensitivity, and specificity stays unchanged, while ROC AUC decreased from 0.715 to 0.684. These results compare the two panels fitted within Part (b); its top-ten panel and results differ from those reported in Part (a).
+```{r}
+q3b_comparison <- read.csv("results/tables/q3b_comparison.csv")
+q3b_selected <- read.csv("results/tables/q3b_selected_proteins.csv")
+knitr::kable(q3b_comparison, digits = 3)
+knitr::kable(q3b_selected)
+```
 
 #### Interpretation
 
-Increasing the number of candidate proteins did not improve prediction on this testing set. The larger panel used five additional proteins but achieved the same classification accuracy. Its lower ROC AUC also suggests that it was slightly less effective at ranking ASD observations above TD observations by predicted probability. Both models were better at identifying TD observations than ASD observations, as shown by their higher specificity than sensitivity.
+Increasing selection from the top ten to the top twenty candidates per method changed the final panel from `r q3b_small$panel_size` to `r q3b_large$panel_size` proteins. Test accuracy `r metric_change(q3b_large$accuracy, q3b_small$accuracy, TRUE)` (from `r percent(q3b_small$accuracy)` to `r percent(q3b_large$accuracy)`), while AUROC `r metric_change(q3b_large$AUROC, q3b_small$AUROC)` (from `r sprintf("%.3f", q3b_small$AUROC)` to `r sprintf("%.3f", q3b_large$AUROC)`). These measures assess different aspects of prediction: accuracy uses a fixed threshold, while AUROC measures ranking across thresholds.
 
-The six-protein panel therefore provided a simpler model with comparable accuracy and a slightly higher ROC AUC in this comparison. However, the results come from one split with only 32 testing observations, so they do not show that the smaller panel will always perform better. Also, although protein selection and model fitting used training data only, the shared preprocessing script scaled and clipped the full dataset before splitting.
+Both panels used the same test subjects and training-derived rankings. The comparison shows the observed tradeoff between panel size and prediction on this split; it does not establish which panel will perform better in a new population. Preprocessing parameters, protein selection, and model fitting all use training subjects only.
 
 #### Question 3(c): Fuzzy intersection
 
@@ -247,9 +286,7 @@ q3c_selected %>%
   knitr::kable()
 ```
 
-The hard intersection selected `r q3c_comparison$panel_size[1]` proteins (@tbl-q3c-proteins). The fuzzy min rule kept the same six and added only TSP4, which ranked 15th by t-test and 10th by random forest. Its test-set performance was identical to the hard intersection: `r percent(q3c_comparison$accuracy[2])` accuracy and an AUROC of `r sprintf("%.3f", q3c_comparison$AUROC[2])` (@tbl-q3c-comparison).
-
-The geometric mean rule was more permissive and selected `r q3c_comparison$panel_size[3]` proteins. Besides TSP4, it added Notch 1, FSTL1, and soluble CXCL16. FSTL1 and CXCL16 ranked 4th and 5th by t-test but only 19th and 20th by random forest (@fig-q3c-membership), so they passed only because the geometric mean let one strong ranking make up for a weak one. This larger panel performed slightly worse: accuracy fell to `r percent(q3c_comparison$accuracy[3])`, specificity fell from `r percent(q3c_comparison$specificity[1])` to `r percent(q3c_comparison$specificity[3])`, and AUROC fell to `r sprintf("%.3f", q3c_comparison$AUROC[3])`. Sensitivity was unchanged at `r percent(q3c_comparison$sensitivity[3])` (@fig-q3c-metrics).
+The hard intersection selected `r q3c_comparison$panel_size[1]` proteins; fuzzy min selected `r q3c_comparison$panel_size[2]`, and the geometric mean selected `r q3c_comparison$panel_size[3]`. The tables and figures show their held-out performance and selected proteins.
 
 ![Membership scores from each selection method for every protein selected by at least one rule, ordered by geometric mean. The dashed line marks the 0.5 threshold.](graphs/q3c_fig-membership.png){#fig-q3c-membership width="85%"}
 
@@ -257,9 +294,11 @@ The geometric mean rule was more permissive and selected `r q3c_comparison$panel
 
 **Interpretation**
 
-Switching to a fuzzy intersection changed the panel more than it changed performance. The six proteins in the hard intersection (DERM, Calcineurin, MAPK2, gp130, MAPK14, and IgD) scored highly under both methods and were kept by every rule, so this core panel is not sensitive to how strictly the rankings are combined. Loosening the rule added proteins that only one method favored, and those additions did not improve prediction. Under the geometric mean rule, they slightly reduced specificity and AUROC. This matches Q3(b): adding proteins beyond the core panel brings in noise rather than useful signal.
+Relative to the hard intersection, fuzzy min changed the panel from `r q3c_hard$panel_size` to `r q3c_min$panel_size` proteins. Its accuracy `r metric_change(q3c_min$accuracy, q3c_hard$accuracy, TRUE)` and AUROC `r metric_change(q3c_min$AUROC, q3c_hard$AUROC)`. The geometric mean selected `r q3c_geo$panel_size` proteins; its accuracy `r metric_change(q3c_geo$accuracy, q3c_hard$accuracy, TRUE)` and AUROC `r metric_change(q3c_geo$AUROC, q3c_hard$AUROC)`. The geometric mean allows a strong ranking from one method to compensate partly for a weaker ranking from the other, whereas fuzzy min is limited by the weaker score.
 
-These differences should not be overinterpreted. The test set contains only 32 subjects, so one misclassified subject changes accuracy by about 3.1 percentage points; the drop from `r percent(q3c_comparison$accuracy[1])` to `r percent(q3c_comparison$accuracy[3])` is a single subject. The results also come from one train/test split, and the depth $K = 30$ and the 0.5 threshold were chosen by us rather than tuned. All three rules fall well below the 83.9% accuracy of the in-class analysis, because that analysis selected proteins using all subjects (see Q3(a)), not because of the intersection rule.
+These results describe sensitivity to the combination rule on one split. They do not establish that added proteins are noise or that one rule is generally superior. The test set contains only 32 subjects, so one misclassified subject changes accuracy by about 3.1 percentage points. The depth $K = 30$ and threshold 0.5 were fixed rather than tuned.
+
+The historical 83.9% in-class accuracy uses full-data preprocessing and selection and a different split. Differences from it cannot be attributed solely to leakage or to the intersection rule.
 
 ### Improved classifier
 
@@ -319,4 +358,8 @@ The accuracy differences in @fig-q4-difference vary across repeats. LASSO's obse
 
 ## Conclusion
 
-This project examines how preprocessing and protein selection shape the search for ASD biomarkers. Comparing transformations, outliers, training-only selection, larger panels, and fuzzy intersections provides a way to assess the choices behind the original analysis. Among the alternative classifiers, LASSO offered the strongest observed prediction, while the small panel offered greater simplicity at some loss of accuracy. The limited sample and variation in selected proteins mean that these results are candidates for further study, rather than evidence of a clinically useful biomarker panel.
+Log transformation reduced skewness for several sampled proteins but did not improve symmetry uniformly. Outlier counts identified subjects with many extreme measurements; the TD group had a higher mean count despite an identical group median. These findings show why preprocessing choices deserve examination before classification.
+
+With training-only preprocessing and selection, Q3(a) achieved `r percent(q3a_metrics$.estimate[q3a_metrics$.metric == "accuracy"])` held-out accuracy. Increasing candidate-list size in Q3(b) changed accuracy from `r percent(q3b_small$accuracy)` to `r percent(q3b_large$accuracy)`. In Q3(c), hard intersection, fuzzy min, and geometric mean achieved `r percent(q3c_hard$accuracy)`, `r percent(q3c_min$accuracy)`, and `r percent(q3c_geo$accuracy)` accuracy, respectively. These comparisons quantify sensitivity to panel construction on the same split, but the small test set limits conclusions about general performance.
+
+Among the Q4 classifiers, LASSO offered the strongest observed cross-validated prediction, while the small panel offered greater simplicity at some loss of accuracy. The historical in-class result used a different evaluation procedure and is a separate reference. The limited sample and variation in selected proteins mean that independent validation is needed before treating any panel as clinically useful.

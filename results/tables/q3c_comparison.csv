@@ -1,4 +1,4 @@
 "rule","panel_size","accuracy","sensitivity","specificity","AUROC"
-"Hard (top 10)",6,0.6875,0.5625,0.8125,0.71484375
-"Fuzzy min",7,0.6875,0.5625,0.8125,0.71484375
-"Fuzzy geometric mean",10,0.65625,0.5625,0.75,0.6796875
+"Hard (top 10)",6,0.65625,0.5,0.8125,0.72265625
+"Fuzzy min",8,0.625,0.5,0.75,0.7265625
+"Fuzzy geometric mean",11,0.65625,0.5625,0.75,0.6796875

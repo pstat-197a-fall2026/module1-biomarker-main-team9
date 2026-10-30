@@ -1,6 +1,6 @@
 # Run from the repository root: Rscript scripts/q4/q4_analysis.R
 # Required packages: glmnet, randomForest, rsample; ggplot2 for the report.
-# No files are written unless save_tables = TRUE is requested.
+# The execution block saves report tables and figures.
 
 # 1. Load the measurements and group labels
 # We keep the original data reading and response encoding. Raw measurements let us
@@ -334,7 +334,7 @@ plot_q4_results <- function(results) {
     ggplot2::geom_point(size = 3, color = "#236B8E") +
     ggplot2::expand_limits(x = c(-5, 0)) +
     ggplot2::labs(title = "Small panel versus baseline in each repeat",
-                  subtitle = "Dashed line: prespecified 5-percentage-point loss margin",
+                  subtitle = "Dashed line: exploratory 5-percentage-point loss margin",
                   x = "Accuracy difference (small panel minus baseline, percentage points)",
                   y = "Validation repeat") +
     ggplot2::theme_minimal(base_size = 11)
@@ -345,7 +345,7 @@ plot_q4_results <- function(results) {
 
 q4_results <- run_q4_analysis(
   project_root = ".",
-  save_tables = FALSE
+  save_tables = TRUE
 )
 
 # Model comparison
@@ -359,3 +359,8 @@ q4_plots <- plot_q4_results(q4_results)
 
 print(q4_plots$selection)
 print(q4_plots$difference)
+
+ggplot2::ggsave("results/graphs/q4_fig-selection-1.png", q4_plots$selection,
+                width = 7, height = 4.5, dpi = 300)
+ggplot2::ggsave("results/graphs/q4_fig-difference-1.png", q4_plots$difference,
+                width = 7, height = 4.5, dpi = 300)

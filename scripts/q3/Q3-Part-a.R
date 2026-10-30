@@ -7,20 +7,10 @@ library(tidymodels)
 library(modelr) 
 library(yardstick)
 
-load(here::here("data", "biomarker-clean.RData"))
-
-
-# Split the data into 80% training and 20% testing
-set.seed(101422)
-
-biomarker_split <- initial_split(
-  biomarker_clean,
-  prop = 0.8,
-  strata = group
-)
-
-train_data <- training(biomarker_split)
-test_data  <- testing(biomarker_split)
+source("scripts/q3/preprocess-split.R", local = TRUE)
+q3_partition <- prepare_q3_split()
+train_data <- q3_partition$train
+test_data <- q3_partition$test
 
 # MULTIPLE TESTING (only on training)
 # function to compute tests
@@ -29,7 +19,8 @@ test_fn <- function(.df) {
     .df,
     formula = level ~ group,
     order = c("ASD", "TD"),
-    alternative = "two-sided"
+    alternative = "two-sided",
+    var.equal = FALSE
   )
 }
 
@@ -45,11 +36,11 @@ ttests_out <- train_data %>%
   mutate(ttest = map(data, test_fn)) %>%
   unnest(ttest) %>%
   mutate(p.adj = p.adjust(p_value, method = "BY")) %>%
-  arrange(p.adj)
+  arrange(p.adj, p_value, protein)
 
 # select top 10 significant proteins
 proteins_s1 <- ttests_out %>%
-  slice_min(p.adj, n = 10) %>%
+  slice_head(n = 10) %>%
   pull(protein)
 
 
@@ -72,7 +63,8 @@ rf_out <- randomForest(x = predictors,
 proteins_s2 <- rf_out$importance %>% 
   as_tibble() %>%
   mutate(protein = rownames(rf_out$importance)) %>%
-  slice_max(MeanDecreaseGini, n = 10) %>%
+  arrange(desc(MeanDecreaseGini), protein) %>%
+  slice_head(n = 10) %>%
   pull(protein)
 
 # LOGISTIC REG & EVAL
@@ -159,3 +151,8 @@ cat("\n--- Q3(a): ROC AUC ---\n")
 print(auc_result)
 
 
+
+write.csv(bind_rows(classification_results, auc_result),
+          "results/tables/q3a_metrics.csv", row.names = FALSE)
+write.csv(data.frame(protein = proteins_sstar),
+          "results/tables/q3a_selected_proteins.csv", row.names = FALSE)

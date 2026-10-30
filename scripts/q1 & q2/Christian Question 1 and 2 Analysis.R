@@ -177,3 +177,9 @@ box1 <- outliers_subject %>%
   labs(title = "Outliers (|z| > 3) per Subject by Group",
     x = "Group", y = "Number of outliers per subject")
 print(box1)
+
+ggsave("results/graphs/q1_q2_q1-raw-hist-1.png", hist1, width = 8, height = 5, dpi = 300)
+
+ggsave("results/graphs/q1_q2_q1-log-hist-1.png", hist2, width = 8, height = 5, dpi = 300)
+
+ggsave("results/graphs/q1_q2_q2-boxplot-1.png", box1, width = 8, height = 5, dpi = 300)

@@ -11,6 +11,10 @@ library(modelr)
 library(yardstick)
 library(glmnet)
 
+# Run from the repository root. Create report output directories first.
+dir.create("results/tables", recursive = TRUE, showWarnings = FALSE)
+dir.create("results/graphs", recursive = TRUE, showWarnings = FALSE)
+
 # Data preprocessing 
 
 load("data/biomarker-clean.RData")
